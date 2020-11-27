@@ -117,3 +117,22 @@ hsvToRgb(uint16_t h, uint16_t s, uint16_t v) {
 
   return color;
 }
+
+// hue = 0-360, saturation = 0-255, value = 0-255
+cRGB
+hsvToRgb360(uint16_t hue, uint8_t saturation, uint8_t value) {
+  uint8_t chroma = (saturation * value) / 255;
+  uint8_t component = chroma * (100 - abs((hue * 100 / 60) % 200 - 100)) / 100;
+  uint8_t mod = value - chroma;
+  uint8_t region = hue / 60;
+
+  cRGB color = {mod, mod, mod};
+  color.r += (region == 0 || region == 5) ? chroma :
+    ((region == 1 || region == 4) ? component : 0);
+  color.g += (region == 1 || region == 2) ? chroma :
+    ((region == 0 || region == 3) ? component : 0);
+  color.b += (region == 3 || region == 4) ? chroma :
+    ((region == 2 || region == 5) ? component : 0);
+
+  return color;
+}
