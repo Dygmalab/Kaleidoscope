@@ -26,17 +26,17 @@ void LEDRainbowEffect::TransientLEDMode::update(void) {
   if (!Runtime.hasTimeExpired(rainbow_last_update,
                               parent_->rainbow_update_delay)) {
     return;
-  } else {
-    rainbow_last_update += parent_->rainbow_update_delay;
   }
 
-  cRGB rainbow = hsvToRgb(rainbow_hue, rainbow_saturation, parent_->rainbow_value);
+  cRGB rainbow = hsvToRgb360(rainbow_hue, rainbow_saturation, parent_->rainbow_value);
+  ::LEDControl.set_all_leds_to(rainbow);
 
   rainbow_hue += rainbow_steps;
-  if (rainbow_hue >= 255) {
-    rainbow_hue -= 255;
+  if (rainbow_hue >= 360) {
+    rainbow_hue -= 360;
   }
-  ::LEDControl.set_all_leds_to(rainbow);
+
+  rainbow_last_update += parent_->rainbow_update_delay;
 }
 
 void LEDRainbowEffect::brightness(byte brightness) {
@@ -57,27 +57,27 @@ void LEDRainbowWaveEffect::TransientLEDMode::update(void) {
   if (!Runtime.hasTimeExpired(rainbow_last_update,
                               parent_->rainbow_update_delay)) {
     return;
-  } else {
-    rainbow_last_update += parent_->rainbow_update_delay;
   }
 
   for (auto led_index : Runtime.device().LEDs().all()) {
     uint16_t led_hue = rainbow_hue + 16 * (led_index.offset() / 4);
-    // We want led_hue to be capped at 255, but we do not want to clip it to
+    // We want led_hue to be capped at 360, but we do not want to clip it to
     // that, because that does not result in a nice animation. Instead, when it
-    // is higher than 255, we simply substract 255, and repeat that until we're
+    // is higher than 360, we simply substract 360, and repeat that until we're
     // within cap. This lays out the rainbow in a kind of wave.
-    while (led_hue >= 255) {
-      led_hue -= 255;
+    while (led_hue >= 360) {
+      led_hue -= 360;
     }
 
-    cRGB rainbow = hsvToRgb(led_hue, rainbow_saturation, parent_->rainbow_value);
+    cRGB rainbow = hsvToRgb360(led_hue, rainbow_saturation, parent_->rainbow_value);
     ::LEDControl.setCrgbAt(led_index.offset(), rainbow);
   }
   rainbow_hue += rainbow_wave_steps;
-  if (rainbow_hue >= 255) {
-    rainbow_hue -= 255;
+  if (rainbow_hue >= 360) {
+    rainbow_hue -= 360;
   }
+
+  rainbow_last_update += parent_->rainbow_update_delay;
 }
 
 void LEDRainbowWaveEffect::brightness(byte brightness) {
