@@ -29,7 +29,7 @@ static constexpr uint8_t uninitialized_mode_id = 255;
 uint8_t LEDControl::mode_id = uninitialized_mode_id;
 uint8_t LEDControl::num_led_modes_ = LEDModeManager::numLEDModes();
 LEDMode *LEDControl::cur_led_mode_ = nullptr;
-uint8_t LEDControl::syncDelay = 32;
+uint8_t LEDControl::syncFPS = 30;
 uint16_t LEDControl::syncTimer = 0;
 bool LEDControl::enabled_ = true;
 Key LEDControl::pending_next_prev_key_ = Key_NoKey;
@@ -189,10 +189,12 @@ kaleidoscope::EventHandlerResult LEDControl::beforeReportingState(void) {
     pending_next_prev_key_ = Key_NoKey;
   }
 
-  if (Runtime.hasTimeExpired(syncTimer, syncDelay)) {
+  update();
+
+  uint8_t timer = 1000 / syncFPS;
+  if (Runtime.hasTimeExpired(syncTimer, timer)) {
     syncLeds();
-    syncTimer += syncDelay;
-    update();
+    syncTimer += timer;
   }
 
   return kaleidoscope::EventHandlerResult::OK;
