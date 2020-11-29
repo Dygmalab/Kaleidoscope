@@ -29,10 +29,6 @@ class LEDRainbowEffect : public Plugin,
   byte brightness(void) {
     return rainbow_value;
   }
-  void update_delay(byte);
-  byte update_delay(void) {
-    return rainbow_update_delay;
-  }
 
   // This class' instance has dynamic lifetime
   //
@@ -56,12 +52,12 @@ class LEDRainbowEffect : public Plugin,
 
     uint8_t rainbow_steps = 2;  //  number of hues we skip in a 360 range per update
     uint8_t rainbow_last_update = 0;
+    uint8_t rainbow_update_delay = 90;
 
     byte rainbow_saturation = 255;
   };
 
  private:
-  uint8_t rainbow_update_delay = 90; // delay between updates (ms)
   byte rainbow_value = 50;
 };
 
@@ -73,10 +69,6 @@ class LEDRainbowWaveEffect : public Plugin, public LEDModeInterface {
   void brightness(byte);
   byte brightness(void) {
     return rainbow_value;
-  }
-  void update_delay(byte);
-  byte update_delay(void) {
-    return rainbow_update_delay;
   }
 
   // This class' instance has dynamic lifetime
@@ -93,19 +85,20 @@ class LEDRainbowWaveEffect : public Plugin, public LEDModeInterface {
 
     void update() final;
 
+    void setTargetFPS(uint8_t fps) final;
+
    private:
 
     const LEDRainbowWaveEffect *parent_;
 
+    uint8_t rainbow_update_delay = 90;
     uint16_t rainbow_hue = 0;  //  stores 0 to 614
 
-    uint8_t rainbow_wave_steps = 2;  //  number of hues we skip in a 360 range per update
     uint8_t rainbow_last_update = 0;
 
     byte rainbow_saturation = 255;
   };
 
-  uint8_t rainbow_update_delay = 90; // delay between updates (ms)
   byte rainbow_value = 50;
 };
 }

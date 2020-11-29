@@ -24,7 +24,7 @@ void LEDRainbowEffect::TransientLEDMode::update(void) {
     return;
 
   if (!Runtime.hasTimeExpired(rainbow_last_update,
-                              parent_->rainbow_update_delay)) {
+                              rainbow_update_delay)) {
     return;
   }
 
@@ -32,15 +32,11 @@ void LEDRainbowEffect::TransientLEDMode::update(void) {
   ::LEDControl.set_all_leds_to(rainbow);
 
   rainbow_hue = (rainbow_hue + rainbow_steps) % 360;
-  rainbow_last_update += parent_->rainbow_update_delay;
+  rainbow_last_update += rainbow_update_delay;
 }
 
 void LEDRainbowEffect::brightness(byte brightness) {
   rainbow_value = brightness;
-}
-
-void LEDRainbowEffect::update_delay(byte delay) {
-  rainbow_update_delay = delay;
 }
 
 
@@ -51,7 +47,7 @@ void LEDRainbowWaveEffect::TransientLEDMode::update(void) {
     return;
 
   if (!Runtime.hasTimeExpired(rainbow_last_update,
-                              parent_->rainbow_update_delay)) {
+                              rainbow_update_delay)) {
     return;
   }
 
@@ -61,16 +57,17 @@ void LEDRainbowWaveEffect::TransientLEDMode::update(void) {
     ::LEDControl.setCrgbAt(led_index.offset(), rainbow);
   }
 
-  rainbow_hue = (rainbow_hue + rainbow_wave_steps) % 360;
-  rainbow_last_update += parent_->rainbow_update_delay;
+  uint8_t hue_steps = max((rainbow_update_delay / 45), 1);
+  rainbow_hue = (rainbow_hue + hue_steps) % 360;
+  rainbow_last_update += rainbow_update_delay;
+}
+
+void LEDRainbowWaveEffect::TransientLEDMode::setTargetFPS(uint8_t fps) {
+  rainbow_update_delay = (1000 / fps) * 3;
 }
 
 void LEDRainbowWaveEffect::brightness(byte brightness) {
   rainbow_value = brightness;
-}
-
-void LEDRainbowWaveEffect::update_delay(byte delay) {
-  rainbow_update_delay = delay;
 }
 
 }
