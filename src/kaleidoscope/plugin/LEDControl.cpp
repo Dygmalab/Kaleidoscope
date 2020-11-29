@@ -207,6 +207,7 @@ EventHandlerResult FocusLEDCommand::onFocusEvent(const char *command) {
     AT,
     THEME,
     BRIGHTNESS,
+    FPS,
   } subCommand;
 
   if (!Runtime.has_leds)
@@ -216,7 +217,8 @@ EventHandlerResult FocusLEDCommand::onFocusEvent(const char *command) {
                                        "led.setAll\n"
                                        "led.mode\n"
                                        "led.brightness\n"
-                                       "led.theme")))
+                                       "led.theme\n"
+                                       "led.fps")))
     return EventHandlerResult::OK;
 
   if (strncmp_P(command, PSTR("led."), 4) != 0)
@@ -231,6 +233,8 @@ EventHandlerResult FocusLEDCommand::onFocusEvent(const char *command) {
     subCommand = THEME;
   else if (strcmp_P(command + 4, PSTR("brightness")) == 0)
     subCommand = BRIGHTNESS;
+  else if (strcmp_P(command + 4, PSTR("fps")) == 0)
+    subCommand = FPS;
   else
     return EventHandlerResult::OK;
 
@@ -309,6 +313,17 @@ EventHandlerResult FocusLEDCommand::onFocusEvent(const char *command) {
       ::Focus.read(color);
 
       ::LEDControl.setCrgbAt(led_index.offset(), color);
+    }
+    break;
+  }
+  case FPS: {
+    if (::Focus.isEOL()) {
+      ::Focus.send(::LEDControl.getTargetFPS());
+    } else {
+      uint8_t fps;
+
+      ::Focus.read(fps);
+      ::LEDControl.setTargetFPS(fps);
     }
     break;
   }

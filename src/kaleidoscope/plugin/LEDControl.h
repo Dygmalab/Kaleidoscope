@@ -73,8 +73,10 @@ class LEDControl : public kaleidoscope::Plugin {
 
     set_all_leds_to({0, 0, 0});
 
-    if (cur_led_mode_ != nullptr)
+    if (cur_led_mode_ != nullptr) {
       cur_led_mode_->onActivate();
+      cur_led_mode_->setTargetFPS(syncFPS);
+    }
   }
 
   static void setCrgbAt(uint8_t led_index, cRGB crgb);
@@ -107,6 +109,16 @@ class LEDControl : public kaleidoscope::Plugin {
   }
   static uint8_t getBrightness() {
     return Runtime.device().ledDriver().getBrightness();
+  }
+
+  static void setTargetFPS(uint8_t fps) {
+    syncFPS = max(fps, 1);
+    if (cur_led_mode_ != nullptr) {
+      cur_led_mode_->setTargetFPS(syncFPS);
+    }
+  }
+  static uint8_t getTargetFPS() {
+    return syncFPS;
   }
 
  private:

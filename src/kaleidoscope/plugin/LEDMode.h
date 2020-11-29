@@ -92,6 +92,16 @@ class LEDMode : public kaleidoscope::Plugin,
    */
   virtual void refreshAt(KeyAddr key_addr) {}
 
+  /* Set the target FPS
+   *
+   * This changes how many times the LEDs are updated per second and any
+   * calculations that affect speed and such should take this into
+   * account to get smooth animations.
+   *
+   * @param fps the target FPS
+   */
+  virtual void setTargetFPS(uint8_t fps) {}
+
  public:
 
   /** Plugin initialization.
