@@ -65,7 +65,7 @@ void HardwareTestMode::testLeds(void) {
   ::LEDControl.activate(&::LEDRainbowEffect);
 
   // rainbow for 10 seconds
-  ::LEDRainbowEffect.update_delay(5);
+  ::LEDControl.setTargetFPS(200);
   for (auto i = 0; i < 300; i++) {
     ::LEDControl.update();
     ::LEDControl.syncLeds();
