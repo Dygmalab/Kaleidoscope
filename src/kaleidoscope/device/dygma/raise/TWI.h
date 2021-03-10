@@ -33,6 +33,7 @@ class TWI {
 
   uint8_t writeTo(uint8_t *data, size_t length);
   uint8_t readFrom(uint8_t* data, size_t length);
+  void recovery();
   void disable();
   void init(uint16_t clock_khz);
   uint8_t crc_errors() {
@@ -42,6 +43,7 @@ class TWI {
  private:
   int addr_;
   uint8_t crc_errors_;
+  uint16_t clock_khz_;
 };
 
 }
