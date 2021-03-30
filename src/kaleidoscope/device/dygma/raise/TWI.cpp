@@ -57,6 +57,7 @@ uint8_t TWI::readFrom(uint8_t* data, size_t length) {
 
   if (!Wire.requestFrom(addr_, length + 2, true)) { // + 2 for the cksum
     // in case slave is not responding - return 0 (0 length of received data).
+    recovery();
     return 0;
   }
   while (counter < length) {
@@ -81,11 +82,41 @@ uint8_t TWI::readFrom(uint8_t* data, size_t length) {
   return length;
 }
 
+void TWI::recovery() {
+  Wire.end();
+
+  //try i2c bus recovery at 100kHz = 5uS high, 5uS low
+  pinMode(SDA, OUTPUT);//keeping SDA high during recovery
+  digitalWrite(SDA, true);
+  pinMode(SCL, OUTPUT);
+  for (int i = 0; i < 10; i++) { //9nth cycle acts as NACK
+    digitalWrite(SCL, true);
+    delayMicroseconds(5);
+    digitalWrite(SCL, false);
+    delayMicroseconds(5);
+  }
+
+  //a STOP signal (SDA from low to high while CLK is high)
+  digitalWrite(SDA, false);
+  delayMicroseconds(5);
+  digitalWrite(SCL, true);
+  delayMicroseconds(2);
+  digitalWrite(SDA, true);
+  delayMicroseconds(2);
+  //bus status is now : FREE
+  pinMode(SDA, INPUT);
+  pinMode(SCL, INPUT);
+
+  Wire.begin();
+  Wire.setClock(clock_khz_ * 1000);
+}
+
 void TWI::disable() {
   Wire.end();
 }
 
 void TWI::init(uint16_t clock_khz) {
+  clock_khz_ = clock_khz;
   Wire.begin();
   Wire.setClock(clock_khz * 1000);
 }
