@@ -500,7 +500,7 @@ EventHandlerResult Qukeys::onSetup()
   Qukeys::storage_base_ = ::EEPROMSettings.requestSlice(size);
   uint16_t hold;
   uint8_t overlap;
-  
+
   Runtime.storage().get(storage_base_, hold);
   if(hold != 65535){
     Qukeys::hold_timeout_ = hold;
@@ -514,6 +514,8 @@ EventHandlerResult Qukeys::onSetup()
   }else{
     Runtime.storage().update(storage_base_ + sizeof(hold), Qukeys::overlap_threshold_);
   }
+
+    return EventHandlerResult::OK;
 }
 
 } // namespace plugin {
