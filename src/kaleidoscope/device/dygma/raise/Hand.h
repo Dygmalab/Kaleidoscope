@@ -41,6 +41,8 @@ namespace raise {
 #define LEDS_PER_BANK 8
 #define LED_BYTES_PER_BANK (sizeof(cRGB) * LEDS_PER_BANK)
 
+#define LED_RED_CHANNEL_MAX 229
+
 typedef union {
   cRGB leds[LEDS_PER_HAND];
   byte bytes[LED_BANKS][LED_BYTES_PER_BANK];
@@ -97,6 +99,7 @@ class Hand {
   TWI twi_;
   keydata_t key_data_;
   uint8_t next_led_bank_ = 0;
+  uint8_t red_max_fraction_ = (LED_RED_CHANNEL_MAX * 100) / 255;
 
   static constexpr uint8_t i2c_addr_base_ = 0x58;
 
