@@ -242,7 +242,7 @@ EventHandlerResult MouseKeys_::onFocusEvent(const char *command)
       ::Focus.read(auxaccelSpeed);
       accelSpeed = auxaccelSpeed;
 
-      Runtime.storage().update(storage_base_ + 0, auxaccelSpeed);
+      Runtime.storage().update(storage_base_ + 3, auxaccelSpeed);
       Runtime.storage().commit();
     }
   }
@@ -266,8 +266,8 @@ EventHandlerResult MouseKeys_::onFocusEvent(const char *command)
       auxaccelDelay = ((b << 8) | a);
       accelDelay = auxaccelDelay;
 
-      Runtime.storage().update(storage_base_ + 1, a);
-      Runtime.storage().update(storage_base_ + 2, b);
+      Runtime.storage().update(storage_base_ + 4, a);
+      Runtime.storage().update(storage_base_ + 5, b);
       Runtime.storage().commit();
     }
   }
@@ -284,7 +284,7 @@ EventHandlerResult MouseKeys_::onFocusEvent(const char *command)
       ::Focus.read(auxwheelSpeed);
       wheelSpeed = auxwheelSpeed;
 
-      Runtime.storage().update(storage_base_ + 0, auxwheelSpeed);
+      Runtime.storage().update(storage_base_ + 6, auxwheelSpeed);
       Runtime.storage().commit();
     }
   }
@@ -308,8 +308,8 @@ EventHandlerResult MouseKeys_::onFocusEvent(const char *command)
       auxwheelDelay = ((b << 8) | a);
       wheelDelay = auxwheelDelay;
 
-      Runtime.storage().update(storage_base_ + 1, a);
-      Runtime.storage().update(storage_base_ + 2, b);
+      Runtime.storage().update(storage_base_ + 7, a);
+      Runtime.storage().update(storage_base_ + 8, b);
       Runtime.storage().commit();
     }
   }
@@ -326,7 +326,7 @@ EventHandlerResult MouseKeys_::onFocusEvent(const char *command)
       ::Focus.read(auxspeedLimit);
       setSpeedLimit(auxspeedLimit);
 
-      Runtime.storage().update(storage_base_ + 0, auxspeedLimit);
+      Runtime.storage().update(storage_base_ + 9, auxspeedLimit);
       Runtime.storage().commit();
     }
   }
@@ -355,46 +355,46 @@ EventHandlerResult MouseKeys_::onSetup(void) {
     Runtime.storage().update(storage_base_, speed);
   }
 
-  Runtime.storage().get(storage_base_ + sizeof(uint8_t) * 1, spdDelay);
+  Runtime.storage().get(storage_base_ + 1, spdDelay);
   if(spdDelay < 65535){
     speedDelay = spdDelay;
   }else{
-    Runtime.storage().update(storage_base_ + sizeof(uint8_t) * 1, speedDelay);
+    Runtime.storage().update(storage_base_ + 1, speedDelay);
   }
 
-  Runtime.storage().get(storage_base_ + sizeof(uint8_t) * 3, accspd);
+  Runtime.storage().get(storage_base_ + 3, accspd);
   if(accspd < 255){
     accelSpeed = accspd;
   }else{
-    Runtime.storage().update(storage_base_ + sizeof(uint8_t) * 3, accelSpeed);
+    Runtime.storage().update(storage_base_ + 3, accelSpeed);
   }
 
-  Runtime.storage().get(storage_base_ + sizeof(uint8_t) * 4, accDelay);
+  Runtime.storage().get(storage_base_ + 4, accDelay);
   if(accDelay < 65535){
     accelDelay = accDelay;
   }else{
-    Runtime.storage().update(storage_base_ + sizeof(uint8_t) * 4, accelDelay);
+    Runtime.storage().update(storage_base_ + 4, accelDelay);
   }
 
-    Runtime.storage().get(storage_base_ + sizeof(uint8_t) * 6, wheelspd);
+    Runtime.storage().get(storage_base_ + 6, wheelspd);
   if(wheelspd < 255){
     wheelSpeed = wheelspd;
   }else{
-    Runtime.storage().update(storage_base_ + sizeof(uint8_t) * 6, wheelSpeed);
+    Runtime.storage().update(storage_base_ + 6, wheelSpeed);
   }
 
-  Runtime.storage().get(storage_base_ + sizeof(uint8_t) * 7, wheelDlay);
+  Runtime.storage().get(storage_base_ + 7, wheelDlay);
   if(wheelDlay != 65535){
     wheelDelay = wheelDlay;
   }else{
-    Runtime.storage().update(storage_base_ + sizeof(uint8_t) * 7, wheelDelay);
+    Runtime.storage().update(storage_base_ + 7, wheelDelay);
   }
 
-  Runtime.storage().get(storage_base_ + sizeof(uint8_t) * 10, spdLimit);
+  Runtime.storage().get(storage_base_ + 9, spdLimit);
   if(spd < 255){
     setSpeedLimit(spdLimit);
   }else{
-    Runtime.storage().update(storage_base_ + sizeof(uint8_t) * 10, MouseWrapper.speedLimit);
+    Runtime.storage().update(storage_base_ + 9, MouseWrapper.speedLimit);
   }
 
   return EventHandlerResult::OK;
