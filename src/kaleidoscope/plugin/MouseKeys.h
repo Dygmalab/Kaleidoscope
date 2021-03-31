@@ -17,6 +17,7 @@
 #pragma once
 
 #include "kaleidoscope/Runtime.h"
+#include <Kaleidoscope-EEPROM-Settings.h>
 #include "kaleidoscope/plugin/MouseKeys/MouseKeyDefs.h"
 #include "kaleidoscope/plugin/MouseKeys/MouseWarpModes.h"
 #include "kaleidoscope/plugin/MouseKeys/MouseWrapper.h"
@@ -37,7 +38,11 @@ class MouseKeys_ : public kaleidoscope::Plugin {
   static void setWarpGridSize(uint8_t grid_size);
   static void setSpeedLimit(uint8_t speed_limit);
 
+  // Kaleidoscope Focus library functions
+  EventHandlerResult onFocusEvent(const char *command);
+  // On Setup handler function
   EventHandlerResult onSetup();
+
   EventHandlerResult beforeReportingState();
   EventHandlerResult afterEachCycle();
   EventHandlerResult onKeyswitchEvent(Key &mappedKey, KeyAddr key_addr, uint8_t keyState);
@@ -47,6 +52,7 @@ class MouseKeys_ : public kaleidoscope::Plugin {
   static uint16_t move_start_time_;
   static uint16_t accel_start_time_;
   static uint16_t wheel_start_time_;
+  static uint16_t storage_base_;
 
   static void scrollWheel(uint8_t keyCode);
 };
