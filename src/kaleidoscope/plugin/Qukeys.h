@@ -19,6 +19,7 @@
 #pragma once
 
 #include "kaleidoscope/Runtime.h"
+#include <Kaleidoscope-EEPROM-Settings.h>
 #include <Kaleidoscope-Ranges.h>
 #include "kaleidoscope/plugin/Qukeys/KeyAddrEventQueue.h"
 
@@ -169,6 +170,13 @@ class Qukeys : public kaleidoscope::Plugin {
                                       uint8_t key_state);
   EventHandlerResult beforeReportingState();
 
+  // Kaleidoscope Focus library functions
+  EventHandlerResult onFocusEvent(const char *command);
+
+  // Reserve storage function for EEPROM_SETTINGS and load stored values if any
+  EventHandlerResult onSetup();
+
+
  private:
   // An array of Qukey objects in PROGMEM.
   Qukey const * qukeys_{nullptr};
@@ -211,6 +219,10 @@ class Qukeys : public kaleidoscope::Plugin {
   // its event queue. We can't just use an "injected" key state flag, because
   // that would cause other plugins to also ignore the event.
   bool flushing_queue_{false};
+
+  // Storage variable for EEPROM_SETTINGS
+  static uint16_t storage_base_;
+
 
   // A cache of the current qukey's primary and alternate key values, so we
   // don't have to keep looking them up from PROGMEM.

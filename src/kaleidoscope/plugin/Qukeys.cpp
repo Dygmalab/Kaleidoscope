@@ -17,6 +17,7 @@
  */
 
 #include "kaleidoscope/plugin/Qukeys.h"
+#include "Kaleidoscope-FocusSerial.h"
 
 #include "kaleidoscope/Runtime.h"
 #include <Kaleidoscope-Ranges.h>
@@ -26,6 +27,8 @@
 
 namespace kaleidoscope {
 namespace plugin {
+
+  uint16_t Qukeys::storage_base_;
 
 // This is the event handler. It ignores certain events, but mostly just adds
 // them to the Qukeys event queue.
@@ -436,6 +439,83 @@ bool isModifierKey(Key key) {
   }
   // In all other cases, return false:
   return false;
+}
+
+EventHandlerResult Qukeys::onFocusEvent(const char *command)
+{
+  if (::Focus.handleHelp(command, PSTR("qukeys.holdTimeout\nqukeys.overlapThreshold")))
+    return EventHandlerResult::OK;
+
+  if (strncmp_P(command, PSTR("qukeys."), 7) != 0)
+    return EventHandlerResult::OK;
+
+  if (strcmp_P(command + 7, PSTR("holdTimeout")) == 0)
+  {
+    if (::Focus.isEOL())
+    {
+      ::Focus.send(Qukeys::hold_timeout_);
+    }
+    else
+    {
+      uint16_t newHold = 0;
+      uint8_t a{0};
+      uint8_t b{0};
+      ::Focus.read(a);
+      while (!::Focus.isEOL())
+      {
+        ::Focus.read(b);
+      }
+      newHold = ((b << 8) | a);
+      Qukeys::hold_timeout_ = newHold;
+
+      Runtime.storage().update(storage_base_ + 0, a);
+      Runtime.storage().update(storage_base_ + 1, b);
+      Runtime.storage().commit();
+    }
+  }
+
+  if (strcmp_P(command + 7, PSTR("overlapThreshold")) == 0)
+  {
+    if (::Focus.isEOL())
+    {
+      ::Focus.send(Qukeys::overlap_threshold_);
+    }
+    else
+    {
+      uint8_t percent;
+      ::Focus.read(percent);
+      Qukeys::overlap_threshold_ = percent;
+
+      Runtime.storage().update(storage_base_ + 2, percent);
+      Runtime.storage().commit();
+    }
+  }
+
+  return EventHandlerResult::EVENT_CONSUMED;
+}
+
+EventHandlerResult Qukeys::onSetup()
+{
+  uint8_t size = 3 * sizeof(uint8_t);
+  Qukeys::storage_base_ = ::EEPROMSettings.requestSlice(size);
+  uint16_t hold;
+  uint8_t overlap;
+
+  Runtime.storage().get(storage_base_, hold);
+  if(hold != 65535){
+    Qukeys::hold_timeout_ = hold;
+  }else{
+    Runtime.storage().update(storage_base_, Qukeys::hold_timeout_);
+  }
+
+  Runtime.storage().get(storage_base_ + 1, overlap);
+  if(overlap <= 100){
+    Qukeys::overlap_threshold_ = overlap;
+  }else{
+    Runtime.storage().update(storage_base_ + 1, Qukeys::overlap_threshold_);
+  }
+
+    return EventHandlerResult::OK;
 }
 
 } // namespace plugin {
