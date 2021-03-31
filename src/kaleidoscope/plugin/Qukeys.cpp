@@ -508,11 +508,11 @@ EventHandlerResult Qukeys::onSetup()
     Runtime.storage().update(storage_base_, Qukeys::hold_timeout_);
   }
 
-  Runtime.storage().get(storage_base_ + sizeof(hold), overlap);
+  Runtime.storage().get(storage_base_ + 1, overlap);
   if(overlap <= 100){
     Qukeys::overlap_threshold_ = overlap;
   }else{
-    Runtime.storage().update(storage_base_ + sizeof(hold), Qukeys::overlap_threshold_);
+    Runtime.storage().update(storage_base_ + 1, Qukeys::overlap_threshold_);
   }
 
     return EventHandlerResult::OK;
