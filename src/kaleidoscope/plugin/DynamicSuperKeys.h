@@ -46,8 +46,6 @@ namespace kaleidoscope
         Tap_Hold,
         Tap_Twice,
         Tap_Twice_Hold,
-        Tap_Thrice,
-        Tap_Thrice_Hold,
       } SuperType;
 
       DynamicSuperKeys() {}

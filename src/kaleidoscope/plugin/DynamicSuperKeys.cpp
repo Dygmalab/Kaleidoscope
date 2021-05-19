@@ -82,9 +82,6 @@ namespace kaleidoscope
         case DynamicSuperKeys::Tap_Once:
           result = DynamicSuperKeys::Tap_Twice;
           break;
-        case DynamicSuperKeys::Tap_Twice:
-          result = DynamicSuperKeys::Tap_Thrice;
-          break;
         default:
           result = DynamicSuperKeys::None;
         }
@@ -94,16 +91,13 @@ namespace kaleidoscope
         switch (previous)
         {
         case DynamicSuperKeys::None:
-          result = DynamicSuperKeys::Tap_Thrice_Hold;
+          result = DynamicSuperKeys::Tap_Twice_Hold;
           break;
         case DynamicSuperKeys::Tap_Once:
           result = DynamicSuperKeys::Hold_Once;
           break;
         case DynamicSuperKeys::Tap_Twice:
           result = DynamicSuperKeys::Tap_Hold;
-          break;
-        case DynamicSuperKeys::Tap_Thrice:
-          result = DynamicSuperKeys::Tap_Twice_Hold;
           break;
         default:
           result = DynamicSuperKeys::None;
