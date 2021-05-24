@@ -77,6 +77,7 @@ namespace kaleidoscope
       static uint8_t super_key_count_;
       static uint8_t offset_;
       static uint16_t start_time_;
+      static uint16_t delayed_time_;
       static Key last_super_key_;
       static KeyAddr last_super_addr_;
 

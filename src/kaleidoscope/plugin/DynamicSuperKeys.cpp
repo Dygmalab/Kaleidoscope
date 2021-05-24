@@ -33,6 +33,7 @@ namespace kaleidoscope
     uint8_t DynamicSuperKeys::super_key_count_;
     constexpr uint8_t DynamicSuperKeys::SUPER_KEY_COUNT;
     uint16_t DynamicSuperKeys::start_time_;
+    uint16_t DynamicSuperKeys::delayed_time_;
     uint16_t DynamicSuperKeys::time_out = 200;
     Key DynamicSuperKeys::last_super_key_ = Key_NoKey;
     KeyAddr DynamicSuperKeys::last_super_addr_;
@@ -112,6 +113,14 @@ namespace kaleidoscope
     {
       uint8_t idx = last_super_key_.getRaw() - ranges::DYNAMIC_SUPER_FIRST;
 
+      if (state_[idx].holded)
+      {
+        hold();
+        state_[idx].triggered = true;
+        Runtime.hid().keyboard().sendReport();
+        return;
+      }
+
       SuperKeys(idx, last_super_addr_, state_[idx].count, Interrupt);
       state_[idx].triggered = true;
 
@@ -121,8 +130,9 @@ namespace kaleidoscope
       Runtime.hid().keyboard().releaseAllKeys();
 
       if (state_[idx].pressed)
-        hold();
-      return;
+      {
+        return;
+      }
 
       release(idx);
     }
@@ -151,7 +161,6 @@ namespace kaleidoscope
       last_super_key_ = Key_NoKey;
 
       state_[super_key_index].pressed = false;
-      state_[super_key_index].holded = false;
       state_[super_key_index].triggered = false;
       state_[super_key_index].release_next = true;
     }
@@ -172,13 +181,16 @@ namespace kaleidoscope
 
       if (state_[idx].holded)
       {
-        SuperKeys(idx, last_super_addr_, state_[idx].count, Hold);
+        if (Runtime.hasTimeExpired(delayed_time_, 500))
+        {
+          SuperKeys(idx, last_super_addr_, state_[idx].count, Hold);
+        }
       }
       else
       {
         state_[idx].holded = true;
+        delayed_time_ = Runtime.millisAtCycleStart();
         state_[idx].count = DynamicSuperKeys::ReturnType(state_[idx].count, Hold);
-        uint8_t idx = last_super_key_.getRaw() - ranges::DYNAMIC_SUPER_FIRST;
         SuperKeys(idx, last_super_addr_, state_[idx].count, Hold);
       }
     }
@@ -205,8 +217,12 @@ namespace kaleidoscope
         handleKeyswitchEvent(key, key_addr, IS_PRESSED | INJECTED);
         break;
       case DynamicSuperKeys::Hold:
+        if (key.getRaw() > 255 && Runtime.hasTimeExpired(delayed_time_, 500))
+        {
+          kaleidoscope::Runtime.hid().keyboard().sendReport();
+          delay(20);
+        }
         handleKeyswitchEvent(key, key_addr, IS_PRESSED | WAS_PRESSED | INJECTED);
-        delay(10);
         break;
       case DynamicSuperKeys::Release:
         kaleidoscope::Runtime.hid().keyboard().sendReport();
@@ -285,6 +301,8 @@ namespace kaleidoscope
 
       if (keyToggledOff(keyState))
       {
+        if (state_[super_key_index].holded)
+          release(super_key_index);
         return EventHandlerResult::EVENT_CONSUMED;
       }
 
@@ -309,6 +327,14 @@ namespace kaleidoscope
       {
         if (!state_[i].release_next)
           continue;
+
+        if (state_[i].holded && state_[i].release_next)
+        {
+          state_[i].count = None;
+          state_[i].release_next = false;
+          state_[i].holded = false;
+          continue;
+        }
 
         SuperKeys(i, last_super_addr_, state_[i].count, Release);
         state_[i].count = None;
