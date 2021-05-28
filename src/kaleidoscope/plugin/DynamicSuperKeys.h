@@ -85,7 +85,7 @@ namespace kaleidoscope
       static SuperType ReturnType(DynamicSuperKeys::SuperType previous, DynamicSuperKeys::ActionType action);
       static void tap(void);
       static void hold(void);
-      static void interrupt(KeyAddr key_addr);
+      static bool interrupt(KeyAddr key_addr);
       static void timeout(void);
       static void release(uint8_t super_key_index);
     };

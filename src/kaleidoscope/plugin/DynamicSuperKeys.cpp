@@ -15,9 +15,11 @@
  */
 
 #include "Kaleidoscope-DynamicSuperKeys.h"
+#include "Kaleidoscope-DynamicMacros.h"
 #include "Kaleidoscope-FocusSerial.h"
 #include <Kaleidoscope-EEPROM-Settings.h>
 #include "kaleidoscope/keyswitch_state.h"
+#include "kaleidoscope/layers.h"
 
 namespace kaleidoscope
 {
@@ -109,16 +111,16 @@ namespace kaleidoscope
 
     // --- actions ---
 
-    void DynamicSuperKeys::interrupt(KeyAddr key_addr)
+    bool DynamicSuperKeys::interrupt(KeyAddr key_addr)
     {
       uint8_t idx = last_super_key_.getRaw() - ranges::DYNAMIC_SUPER_FIRST;
 
-      if (state_[idx].holded)
+      if (state_[idx].pressed)
       {
         hold();
         state_[idx].triggered = true;
         Runtime.hid().keyboard().sendReport();
-        return;
+        return false;
       }
 
       SuperKeys(idx, last_super_addr_, state_[idx].count, Interrupt);
@@ -129,12 +131,8 @@ namespace kaleidoscope
       Runtime.hid().keyboard().sendReport();
       Runtime.hid().keyboard().releaseAllKeys();
 
-      if (state_[idx].pressed)
-      {
-        return;
-      }
-
       release(idx);
+      return true;
     }
 
     void DynamicSuperKeys::timeout(void)
@@ -181,10 +179,7 @@ namespace kaleidoscope
 
       if (state_[idx].holded)
       {
-        if (Runtime.hasTimeExpired(delayed_time_, 500))
-        {
-          SuperKeys(idx, last_super_addr_, state_[idx].count, Hold);
-        }
+        SuperKeys(idx, last_super_addr_, state_[idx].count, Hold);
       }
       else
       {
@@ -214,10 +209,30 @@ namespace kaleidoscope
         break;
       case DynamicSuperKeys::Interrupt:
       case DynamicSuperKeys::Timeout:
+        if (key.getRaw() >= 17492 && key.getRaw() <= 17501)
+        {
+          ::Layer.move(key.getKeyCode() - LAYER_MOVE_OFFSET);
+          break;
+        }
+        if (key.getRaw() >= ranges::DYNAMIC_MACRO_FIRST && key.getRaw() <= ranges::DYNAMIC_MACRO_LAST)
+        {
+          ::DynamicMacros.play(key.getRaw() - 24576);
+          break;
+        }
         handleKeyswitchEvent(key, key_addr, IS_PRESSED | INJECTED);
         break;
       case DynamicSuperKeys::Hold:
-        if (key.getRaw() > 255 && Runtime.hasTimeExpired(delayed_time_, 500))
+        if (key.getRaw() >= 17450 && key.getRaw() <= 17459)
+        {
+          ::Layer.activate(key.getKeyCode() - LAYER_SHIFT_OFFSET);
+          break;
+        }
+        if (key.getRaw() >= ranges::DYNAMIC_MACRO_FIRST && key.getRaw() <= ranges::DYNAMIC_MACRO_LAST)
+        {
+          ::DynamicMacros.play(key.getRaw() - 24576);
+          break;
+        }
+        if ((key.getRaw() == 23785 && key.getRaw() == 23786) && Runtime.hasTimeExpired(delayed_time_, 500))
         {
           kaleidoscope::Runtime.hid().keyboard().sendReport();
           delay(20);
@@ -225,6 +240,11 @@ namespace kaleidoscope
         handleKeyswitchEvent(key, key_addr, IS_PRESSED | WAS_PRESSED | INJECTED);
         break;
       case DynamicSuperKeys::Release:
+        if (key.getRaw() >= 17450 && key.getRaw() <= 17459)
+        {
+          ::Layer.deactivate(key.getKeyCode() - LAYER_SHIFT_OFFSET);
+          break;
+        }
         kaleidoscope::Runtime.hid().keyboard().sendReport();
         handleKeyswitchEvent(key, key_addr, WAS_PRESSED | INJECTED);
         break;
@@ -247,8 +267,8 @@ namespace kaleidoscope
 
         if (keyToggledOn(keyState))
         {
-          interrupt(key_addr);
-          mapped_key = Key_NoKey;
+          if (interrupt(key_addr))
+            mapped_key = Key_NoKey;
         }
 
         return EventHandlerResult::OK;
@@ -282,7 +302,7 @@ namespace kaleidoscope
         }
         else
         {
-          if (keyToggledOff(keyState) && static_cast<uint8_t>(state_[super_key_index].count))
+          if (keyToggledOff(keyState))
           {
             release(super_key_index);
             return EventHandlerResult::EVENT_CONSUMED;
@@ -328,15 +348,8 @@ namespace kaleidoscope
         if (!state_[i].release_next)
           continue;
 
-        if (state_[i].holded && state_[i].release_next)
-        {
-          state_[i].count = None;
-          state_[i].release_next = false;
-          state_[i].holded = false;
-          continue;
-        }
-
         SuperKeys(i, last_super_addr_, state_[i].count, Release);
+        state_[i].holded = false;
         state_[i].count = None;
         state_[i].release_next = false;
       }
