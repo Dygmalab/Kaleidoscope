@@ -36,20 +36,25 @@ namespace kaleidoscope
     constexpr uint8_t DynamicSuperKeys::SUPER_KEY_COUNT;
     uint16_t DynamicSuperKeys::start_time_;
     uint16_t DynamicSuperKeys::delayed_time_;
+    uint16_t DynamicSuperKeys::wait_for = 500;
+    uint8_t DynamicSuperKeys::repeat_interval = 20;
     uint16_t DynamicSuperKeys::time_out = 200;
     Key DynamicSuperKeys::last_super_key_ = Key_NoKey;
     KeyAddr DynamicSuperKeys::last_super_addr_;
 
     void DynamicSuperKeys::updateDynamicSuperKeysCache()
     {
-      uint16_t pos = storage_base_;
+      uint16_t pos = storage_base_ + 5;
       uint8_t current_id = 0;
       bool previous_super_key_ended = false;
 
       super_key_count_ = 0;
       map_[0] = 0;
+      Kaleidoscope.storage().get(storage_base_ + 0, wait_for);
+      Kaleidoscope.storage().get(storage_base_ + 2, time_out);
+      Kaleidoscope.storage().get(storage_base_ + 4, repeat_interval);
 
-      while (pos < storage_base_ + storage_size_)
+      while (pos < (storage_base_ + 5) + storage_size_)
       {
         uint16_t raw_key = Kaleidoscope.storage().read(pos);
         pos += 2;
@@ -57,7 +62,7 @@ namespace kaleidoscope
 
         if (key == Key_NoKey)
         {
-          map_[++current_id] = pos - storage_base_;
+          map_[++current_id] = pos - storage_base_ - 5;
 
           if (previous_super_key_ended)
             return;
@@ -85,8 +90,11 @@ namespace kaleidoscope
         case DynamicSuperKeys::Tap_Once:
           result = DynamicSuperKeys::Tap_Twice;
           break;
+        case DynamicSuperKeys::Tap_Twice:
+          result = DynamicSuperKeys::Tap_Trice;
+          break;
         default:
-          result = DynamicSuperKeys::None;
+          result = DynamicSuperKeys::Tap_Trice;
         }
       }
       if (action == Hold)
@@ -94,7 +102,7 @@ namespace kaleidoscope
         switch (previous)
         {
         case DynamicSuperKeys::None:
-          result = DynamicSuperKeys::Tap_Twice_Hold;
+          result = DynamicSuperKeys::None;
           break;
         case DynamicSuperKeys::Tap_Once:
           result = DynamicSuperKeys::Hold_Once;
@@ -102,8 +110,11 @@ namespace kaleidoscope
         case DynamicSuperKeys::Tap_Twice:
           result = DynamicSuperKeys::Tap_Hold;
           break;
+        case DynamicSuperKeys::Tap_Trice:
+          result = DynamicSuperKeys::Tap_Twice_Hold;
+          break;
         default:
-          result = DynamicSuperKeys::None;
+          result = DynamicSuperKeys::Tap_Twice_Hold;
         }
       }
       return result;
@@ -183,10 +194,11 @@ namespace kaleidoscope
       }
       else
       {
+        delayed_time_ = 0;
         state_[idx].holded = true;
-        delayed_time_ = Runtime.millisAtCycleStart();
         state_[idx].count = DynamicSuperKeys::ReturnType(state_[idx].count, Hold);
         SuperKeys(idx, last_super_addr_, state_[idx].count, Hold);
+        delayed_time_ = Runtime.millisAtCycleStart();
       }
     }
 
@@ -195,13 +207,16 @@ namespace kaleidoscope
     bool DynamicSuperKeys::SuperKeys(uint8_t super_key_index, KeyAddr key_addr,
                                      DynamicSuperKeys::SuperType tap_count, DynamicSuperKeys::ActionType super_key_action)
     {
-      uint16_t pos = map_[super_key_index - offset_] + ((tap_count - 1) * 2);
+      DynamicSuperKeys::SuperType corrected = tap_count;
+      if (corrected == DynamicSuperKeys::Tap_Trice)
+        corrected = DynamicSuperKeys::Tap_Twice;
+      uint16_t pos = map_[super_key_index - offset_] + ((corrected - 1) * 2);
       uint16_t next_pos = map_[super_key_index - offset_ + 1];
       if (next_pos <= pos || (super_key_index > offset_ + super_key_count_))
         return false;
 
       Key key;
-      Kaleidoscope.storage().get(storage_base_ + pos, key);
+      Kaleidoscope.storage().get(storage_base_ + pos + 5, key);
 
       switch (super_key_action)
       {
@@ -216,28 +231,44 @@ namespace kaleidoscope
         }
         if (key.getRaw() >= ranges::DYNAMIC_MACRO_FIRST && key.getRaw() <= ranges::DYNAMIC_MACRO_LAST)
         {
-          ::DynamicMacros.play(key.getRaw() - 24576);
+          ::DynamicMacros.play(key.getRaw() - ranges::DYNAMIC_MACRO_FIRST);
           break;
         }
         handleKeyswitchEvent(key, key_addr, IS_PRESSED | INJECTED);
         break;
       case DynamicSuperKeys::Hold:
-        if (key.getRaw() >= 17450 && key.getRaw() <= 17459)
+        if (delayed_time_ == 0)
         {
-          ::Layer.activate(key.getKeyCode() - LAYER_SHIFT_OFFSET);
-          break;
+          if (key.getRaw() >= 17450 && key.getRaw() <= 17459)
+          {
+            ::Layer.activate(key.getKeyCode() - LAYER_SHIFT_OFFSET);
+            break;
+          }
+          if (key.getRaw() >= ranges::DYNAMIC_MACRO_FIRST && key.getRaw() <= ranges::DYNAMIC_MACRO_LAST)
+          {
+            ::DynamicMacros.play(key.getRaw() - ranges::DYNAMIC_MACRO_FIRST);
+            break;
+          }
+          handleKeyswitchEvent(key, key_addr, IS_PRESSED | WAS_PRESSED | INJECTED);
         }
-        if (key.getRaw() >= ranges::DYNAMIC_MACRO_FIRST && key.getRaw() <= ranges::DYNAMIC_MACRO_LAST)
+        else
         {
-          ::DynamicMacros.play(key.getRaw() - 24576);
-          break;
+          if (Runtime.hasTimeExpired(delayed_time_, wait_for))
+          {
+            if (key.getRaw() >= ranges::DYNAMIC_MACRO_FIRST && key.getRaw() <= ranges::DYNAMIC_MACRO_LAST)
+            {
+              delay(repeat_interval);
+              ::DynamicMacros.play(key.getRaw() - ranges::DYNAMIC_MACRO_FIRST);
+              break;
+            }
+            if (key.getRaw() == 23785 || key.getRaw() == 23786)
+            {
+              delay(repeat_interval);
+              kaleidoscope::Runtime.hid().keyboard().sendReport();
+            }
+          }
+          handleKeyswitchEvent(key, key_addr, IS_PRESSED | WAS_PRESSED | INJECTED);
         }
-        if ((key.getRaw() == 23785 && key.getRaw() == 23786) && Runtime.hasTimeExpired(delayed_time_, 500))
-        {
-          kaleidoscope::Runtime.hid().keyboard().sendReport();
-          delay(20);
-        }
-        handleKeyswitchEvent(key, key_addr, IS_PRESSED | WAS_PRESSED | INJECTED);
         break;
       case DynamicSuperKeys::Release:
         if (key.getRaw() >= 17450 && key.getRaw() <= 17459)
@@ -365,7 +396,7 @@ namespace kaleidoscope
 
     EventHandlerResult DynamicSuperKeys::onFocusEvent(const char *command)
     {
-      if (::Focus.handleHelp(command, PSTR("superkeys.map")))
+      if (::Focus.handleHelp(command, PSTR("superkeys.map\nsuperkeys.waitfor\nsuperkeys.timeout\nsuperkeys.repeat")))
         return EventHandlerResult::OK;
 
       if (strncmp_P(command, PSTR("superkeys."), 10) != 0)
@@ -378,7 +409,7 @@ namespace kaleidoscope
           for (uint16_t i = 0; i < storage_size_; i += 2)
           {
             Key k;
-            Kaleidoscope.storage().get(storage_base_ + i, k);
+            Kaleidoscope.storage().get(storage_base_ + i + 5, k);
             ::Focus.send(k);
           }
         }
@@ -391,9 +422,54 @@ namespace kaleidoscope
             Key k;
             ::Focus.read(k);
 
-            Kaleidoscope.storage().put(storage_base_ + pos, k);
+            Kaleidoscope.storage().put(storage_base_ + pos + 5, k);
             pos += 2;
           }
+          Kaleidoscope.storage().commit();
+          updateDynamicSuperKeysCache();
+        }
+      }
+      if (strcmp_P(command + 10, PSTR("waitfor")) == 0)
+      {
+        if (::Focus.isEOL())
+        {
+          ::Focus.send(DynamicSuperKeys::wait_for);
+        }
+        else
+        {
+          uint16_t wait = 0;
+          ::Focus.read(wait);
+          Kaleidoscope.storage().put(storage_base_ + 0, wait);
+          Kaleidoscope.storage().commit();
+          updateDynamicSuperKeysCache();
+        }
+      }
+      if (strcmp_P(command + 10, PSTR("timeout")) == 0)
+      {
+        if (::Focus.isEOL())
+        {
+          ::Focus.send(DynamicSuperKeys::time_out);
+        }
+        else
+        {
+          uint16_t time = 0;
+          ::Focus.read(time);
+          Kaleidoscope.storage().put(storage_base_ + 2, time);
+          Kaleidoscope.storage().commit();
+          updateDynamicSuperKeysCache();
+        }
+      }
+      if (strcmp_P(command + 10, PSTR("repeat")) == 0)
+      {
+        if (::Focus.isEOL())
+        {
+          ::Focus.send(DynamicSuperKeys::repeat_interval);
+        }
+        else
+        {
+          uint8_t repeat = 0;
+          ::Focus.read(repeat);
+          Kaleidoscope.storage().put(storage_base_ + 4, repeat);
           Kaleidoscope.storage().commit();
           updateDynamicSuperKeysCache();
         }
@@ -404,7 +480,7 @@ namespace kaleidoscope
 
     void DynamicSuperKeys::setup(uint8_t dynamic_offset, uint16_t size)
     {
-      storage_base_ = ::EEPROMSettings.requestSlice(size);
+      storage_base_ = ::EEPROMSettings.requestSlice(size + 5);
       storage_size_ = size;
       offset_ = dynamic_offset;
       updateDynamicSuperKeysCache();

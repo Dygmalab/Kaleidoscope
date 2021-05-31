@@ -46,11 +46,14 @@ namespace kaleidoscope
         Tap_Hold,
         Tap_Twice,
         Tap_Twice_Hold,
+        Tap_Trice,
       } SuperType;
 
       DynamicSuperKeys() {}
 
       static uint16_t time_out;
+      static uint16_t wait_for;
+      static uint8_t repeat_interval;
 
       static bool SuperKeys(uint8_t tap_dance_index, KeyAddr key_addr, DynamicSuperKeys::SuperType tap_count, DynamicSuperKeys::ActionType tap_dance_action);
       EventHandlerResult onKeyswitchEvent(Key &mapped_key, KeyAddr key_addr, uint8_t keyState);
