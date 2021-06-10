@@ -53,6 +53,7 @@ namespace kaleidoscope
 
       static uint16_t time_out;
       static uint16_t wait_for;
+      static uint16_t hold_start;
       static uint8_t repeat_interval;
 
       static bool SuperKeys(uint8_t tap_dance_index, KeyAddr key_addr, DynamicSuperKeys::SuperType tap_count, DynamicSuperKeys::ActionType tap_dance_action);

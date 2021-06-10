@@ -37,6 +37,7 @@ namespace kaleidoscope
     uint16_t DynamicSuperKeys::start_time_;
     uint16_t DynamicSuperKeys::delayed_time_;
     uint16_t DynamicSuperKeys::wait_for = 500;
+    uint16_t DynamicSuperKeys::hold_start = 100;
     uint8_t DynamicSuperKeys::repeat_interval = 20;
     uint16_t DynamicSuperKeys::time_out = 200;
     Key DynamicSuperKeys::last_super_key_ = Key_NoKey;
@@ -44,7 +45,7 @@ namespace kaleidoscope
 
     void DynamicSuperKeys::updateDynamicSuperKeysCache()
     {
-      uint16_t pos = storage_base_ + 5;
+      uint16_t pos = storage_base_ + 7;
       uint8_t current_id = 0;
       bool previous_super_key_ended = false;
 
@@ -52,9 +53,10 @@ namespace kaleidoscope
       map_[0] = 0;
       Kaleidoscope.storage().get(storage_base_ + 0, wait_for);
       Kaleidoscope.storage().get(storage_base_ + 2, time_out);
-      Kaleidoscope.storage().get(storage_base_ + 4, repeat_interval);
+      Kaleidoscope.storage().get(storage_base_ + 4, hold_start);
+      Kaleidoscope.storage().get(storage_base_ + 6, repeat_interval);
 
-      while (pos < (storage_base_ + 5) + storage_size_)
+      while (pos < (storage_base_ + 7) + storage_size_)
       {
         uint16_t raw_key = Kaleidoscope.storage().read(pos);
         pos += 2;
@@ -62,7 +64,7 @@ namespace kaleidoscope
 
         if (key == Key_NoKey)
         {
-          map_[++current_id] = pos - storage_base_ - 5;
+          map_[++current_id] = pos - storage_base_ - 7;
 
           if (previous_super_key_ended)
             return;
@@ -128,29 +130,47 @@ namespace kaleidoscope
 
       if (state_[idx].pressed)
       {
-        hold();
-        state_[idx].triggered = true;
-        Runtime.hid().keyboard().sendReport();
-        return false;
+        if (Runtime.hasTimeExpired(start_time_, hold_start))
+        {
+          hold();
+          state_[idx].triggered = true;
+          kaleidoscope::Runtime.hid().keyboard().sendReport();
+          return false;
+        }
+        else
+        {
+          SuperKeys(idx, last_super_addr_, state_[idx].count, Interrupt);
+          state_[idx].pressed = false;
+          state_[idx].triggered = false;
+          state_[idx].holded = false;
+          state_[idx].count = None;
+          state_[idx].release_next = false;
+          last_super_key_ = Key_NoKey;
+          return true;
+        }
       }
+      return false;
 
-      SuperKeys(idx, last_super_addr_, state_[idx].count, Interrupt);
-      state_[idx].triggered = true;
-
-      last_super_key_ = Key_NoKey;
-
-      Runtime.hid().keyboard().sendReport();
-      Runtime.hid().keyboard().releaseAllKeys();
-
-      release(idx);
-      return true;
+      // last_super_key_ = Key_NoKey;
+      // kaleidoscope::Runtime.hid().keyboard().sendReport();
+      // kaleidoscope::Runtime.hid().keyboard().releaseAllKeys();
+      // //release(idx);
+      // state_[idx].pressed = false;
+      // state_[idx].triggered = false;
+      // state_[idx].holded = false;
+      // state_[idx].count = None;
+      // state_[idx].release_next = false;
+      // return true;
     }
 
     void DynamicSuperKeys::timeout(void)
     {
       uint8_t idx = last_super_key_.getRaw() - ranges::DYNAMIC_SUPER_FIRST;
 
-      state_[idx].triggered = true;
+      if (state_[idx].triggered)
+      {
+        return;
+      }
 
       if (state_[idx].pressed)
       {
@@ -158,8 +178,8 @@ namespace kaleidoscope
         return;
       }
 
+      state_[idx].triggered = true;
       SuperKeys(idx, last_super_addr_, state_[idx].count, Timeout);
-
       last_super_key_ = Key_NoKey;
 
       release(idx);
@@ -216,7 +236,7 @@ namespace kaleidoscope
         return false;
 
       Key key;
-      Kaleidoscope.storage().get(storage_base_ + pos + 5, key);
+      Kaleidoscope.storage().get(storage_base_ + pos + 7, key);
 
       switch (super_key_action)
       {
@@ -288,42 +308,55 @@ namespace kaleidoscope
 
     EventHandlerResult DynamicSuperKeys::onKeyswitchEvent(Key &mapped_key, KeyAddr key_addr, uint8_t keyState)
     {
+      // If k is not a physical key, ignore it; some other plugin injected it.
       if (keyState & INJECTED)
-        return EventHandlerResult::OK;
-
-      if (mapped_key.getRaw() < ranges::DYNAMIC_SUPER_FIRST || mapped_key.getRaw() > ranges::DYNAMIC_SUPER_LAST)
       {
-        if (last_super_key_ == Key_NoKey)
-          return EventHandlerResult::OK;
-
-        if (keyToggledOn(keyState))
-        {
-          if (interrupt(key_addr))
-            mapped_key = Key_NoKey;
-        }
-
         return EventHandlerResult::OK;
       }
 
+      // If it's not a superkey press, we treat it here
+      if (mapped_key.getRaw() < ranges::DYNAMIC_SUPER_FIRST || mapped_key.getRaw() > ranges::DYNAMIC_SUPER_LAST)
+      {
+        // This is the way out when no superkey was pressed before this one.
+        if (last_super_key_ == Key_NoKey)
+          return EventHandlerResult::OK;
+
+        // This only executes if there was a previous superkey pressed and stored in last_super_key
+        if (keyToggledOn(keyState))
+        {
+          // A press of a foreign key interrupts the stacking of superkey taps, thus making the key collapse, depending on the time spent on it,
+          // it will turn into it's corresponding hold, or remain as a tap
+          if (interrupt(key_addr))
+            mapped_key = Key_NoKey;
+        }
+        return EventHandlerResult::OK;
+      }
+      // get the superkey index of the received superkey
       uint8_t super_key_index = mapped_key.getRaw() - ranges::DYNAMIC_SUPER_FIRST;
 
+      // Change the current pressed state of the superkey to false if ANY superkey is released
       if (keyToggledOff(keyState))
         state_[super_key_index].pressed = false;
 
+      // check if we are working in sequence or not, if not
       if (last_super_key_ != mapped_key)
       {
+        // if the last superkey is nonexistent
         if (last_super_key_ == Key_NoKey)
         {
+          // cleaning procedure for the key after release when the timeout has ended or another key has been pressed
           if (state_[super_key_index].triggered)
           {
             if (keyToggledOff(keyState))
             {
+              // release the current superkey if the key was released
               release(super_key_index);
             }
 
             return EventHandlerResult::EVENT_CONSUMED;
           }
 
+          // If the key is just pressed, activate the tap function and save the superkey
           last_super_key_ = mapped_key;
           last_super_addr_ = key_addr;
 
@@ -331,7 +364,7 @@ namespace kaleidoscope
 
           return EventHandlerResult::EVENT_CONSUMED;
         }
-        else
+        else // Behaviour definition for the case of a different superkey being pressed after the original one
         {
           if (keyToggledOff(keyState))
           {
@@ -350,23 +383,28 @@ namespace kaleidoscope
 
       // in sequence
 
+      // If the key is released after pressing it a second time or more
       if (keyToggledOff(keyState))
       {
-        if (state_[super_key_index].holded)
+        // if it's already triggered (so it emmited) release, if not, wait
+        if (state_[super_key_index].triggered)
           release(super_key_index);
         return EventHandlerResult::EVENT_CONSUMED;
       }
 
+      // If the key is not released, but newly pressed or updated, store it's values again
       last_super_key_ = mapped_key;
       last_super_addr_ = key_addr;
       state_[super_key_index].pressed = true;
 
+      // if key is not yet triggered (timeout not reached) then add a tap to it
       if (keyToggledOn(keyState))
       {
         tap();
         return EventHandlerResult::EVENT_CONSUMED;
       }
 
+      // if key is already triggered, avoid adding to it's counter
       if (state_[super_key_index].triggered)
         hold();
       return EventHandlerResult::EVENT_CONSUMED;
@@ -409,7 +447,7 @@ namespace kaleidoscope
           for (uint16_t i = 0; i < storage_size_; i += 2)
           {
             Key k;
-            Kaleidoscope.storage().get(storage_base_ + i + 5, k);
+            Kaleidoscope.storage().get(storage_base_ + i + 7, k);
             ::Focus.send(k);
           }
         }
@@ -422,7 +460,7 @@ namespace kaleidoscope
             Key k;
             ::Focus.read(k);
 
-            Kaleidoscope.storage().put(storage_base_ + pos + 5, k);
+            Kaleidoscope.storage().put(storage_base_ + pos + 7, k);
             pos += 2;
           }
           Kaleidoscope.storage().commit();
@@ -459,6 +497,21 @@ namespace kaleidoscope
           updateDynamicSuperKeysCache();
         }
       }
+      if (strcmp_P(command + 10, PSTR("holdstart")) == 0)
+      {
+        if (::Focus.isEOL())
+        {
+          ::Focus.send(DynamicSuperKeys::hold_start);
+        }
+        else
+        {
+          uint16_t hold = 0;
+          ::Focus.read(hold);
+          Kaleidoscope.storage().put(storage_base_ + 4, hold);
+          Kaleidoscope.storage().commit();
+          updateDynamicSuperKeysCache();
+        }
+      }
       if (strcmp_P(command + 10, PSTR("repeat")) == 0)
       {
         if (::Focus.isEOL())
@@ -469,7 +522,7 @@ namespace kaleidoscope
         {
           uint8_t repeat = 0;
           ::Focus.read(repeat);
-          Kaleidoscope.storage().put(storage_base_ + 4, repeat);
+          Kaleidoscope.storage().put(storage_base_ + 6, repeat);
           Kaleidoscope.storage().commit();
           updateDynamicSuperKeysCache();
         }
@@ -480,7 +533,7 @@ namespace kaleidoscope
 
     void DynamicSuperKeys::setup(uint8_t dynamic_offset, uint16_t size)
     {
-      storage_base_ = ::EEPROMSettings.requestSlice(size + 5);
+      storage_base_ = ::EEPROMSettings.requestSlice(size + 7);
       storage_size_ = size;
       offset_ = dynamic_offset;
       updateDynamicSuperKeysCache();
