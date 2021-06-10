@@ -149,7 +149,7 @@ namespace kaleidoscope
           return true;
         }
       }
-      return false;
+      return true;
 
       // last_super_key_ = Key_NoKey;
       // kaleidoscope::Runtime.hid().keyboard().sendReport();
@@ -378,6 +378,7 @@ namespace kaleidoscope
           }
 
           interrupt(key_addr);
+          return EventHandlerResult::EVENT_CONSUMED;
         }
       }
 
