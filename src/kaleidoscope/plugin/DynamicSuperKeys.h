@@ -60,7 +60,7 @@ namespace kaleidoscope
       EventHandlerResult onKeyswitchEvent(Key &mapped_key, KeyAddr key_addr, uint8_t keyState);
 
       EventHandlerResult onFocusEvent(const char *command);
-      EventHandlerResult afterEachCycle();
+      EventHandlerResult beforeReportingState();
 
       static void setup(uint8_t dynamic_offset, uint16_t size);
 
@@ -72,6 +72,7 @@ namespace kaleidoscope
         bool triggered : 1;
         bool release_next : 1;
         bool holded : 1;
+        bool printonrelease : 1;
         SuperType count;
       };
       static SuperKeyState state_[SUPER_KEY_COUNT];
@@ -84,6 +85,7 @@ namespace kaleidoscope
       static uint16_t delayed_time_;
       static Key last_super_key_;
       static KeyAddr last_super_addr_;
+      static bool modifier_pressed_;
 
       static void updateDynamicSuperKeysCache();
       static SuperType ReturnType(DynamicSuperKeys::SuperType previous, DynamicSuperKeys::ActionType action);
