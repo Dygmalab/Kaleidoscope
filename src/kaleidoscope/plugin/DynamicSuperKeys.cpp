@@ -43,6 +43,8 @@ namespace kaleidoscope
     Key DynamicSuperKeys::last_super_key_ = Key_NoKey;
     KeyAddr DynamicSuperKeys::last_super_addr_;
     bool DynamicSuperKeys::modifier_pressed_ = false;
+    bool DynamicSuperKeys::layer_shifted_ = false;
+    uint8_t DynamicSuperKeys::layer_shifted_number_ = 0;
 
     void DynamicSuperKeys::updateDynamicSuperKeysCache()
     {
@@ -65,7 +67,7 @@ namespace kaleidoscope
 
         if (key == Key_NoKey)
         {
-          state_[current_id].printonrelease = (pos - storage_base_ - 7) <= 4;
+          state_[current_id].printonrelease = (pos - storage_base_ - 7 - map_[current_id]) == 6;
           map_[++current_id] = pos - storage_base_ - 7;
           if (previous_super_key_ended)
             return;
@@ -131,10 +133,10 @@ namespace kaleidoscope
 
       if (state_[idx].pressed)
       {
-        if (Runtime.hasTimeExpired(start_time_, hold_start))
+        if (Runtime.hasTimeExpired(start_time_, hold_start) || state_[idx].printonrelease)
         {
           hold();
-          kaleidoscope::Runtime.hid().keyboard().sendReport();
+          // kaleidoscope::Runtime.hid().keyboard().sendReport();
           return false;
         }
       }
@@ -296,7 +298,10 @@ namespace kaleidoscope
         {
           if (key.getRaw() >= 17450 && key.getRaw() <= 17459)
           {
-            ::Layer.activate(key.getKeyCode() - LAYER_SHIFT_OFFSET);
+            layer_shifted_ = true;
+            layer_shifted_number_ = key.getKeyCode() - LAYER_SHIFT_OFFSET;
+            // ::Layer.activate(key.getKeyCode() - LAYER_SHIFT_OFFSET);
+            handleKeyswitchEvent(key, key_addr, IS_PRESSED | WAS_PRESSED | INJECTED);
             break;
           }
           if (key.getRaw() >= ranges::DYNAMIC_MACRO_FIRST && key.getRaw() <= ranges::DYNAMIC_MACRO_LAST)
@@ -339,10 +344,14 @@ namespace kaleidoscope
         {
           if (Runtime.hasTimeExpired(delayed_time_, wait_for))
           {
-            if (key.getRaw() >= ranges::DYNAMIC_MACRO_FIRST && key.getRaw() <= ranges::DYNAMIC_MACRO_LAST)
+            // if (key.getRaw() >= ranges::DYNAMIC_MACRO_FIRST && key.getRaw() <= ranges::DYNAMIC_MACRO_LAST)
+            // {
+            //   delay(repeat_interval);
+            //   ::DynamicMacros.play(key.getRaw() - ranges::DYNAMIC_MACRO_FIRST);
+            //   break;
+            // }
+            if (key.getRaw() >= 17450 && key.getRaw() <= 17459)
             {
-              delay(repeat_interval);
-              ::DynamicMacros.play(key.getRaw() - ranges::DYNAMIC_MACRO_FIRST);
               break;
             }
             if (key.getRaw() == 23785 || key.getRaw() == 23786)
@@ -363,6 +372,7 @@ namespace kaleidoscope
         if (key.getRaw() >= 17450 && key.getRaw() <= 17459)
         {
           ::Layer.deactivate(key.getKeyCode() - LAYER_SHIFT_OFFSET);
+          layer_shifted_ = false;
           break;
         }
         if (key.getRaw() >= 256 && key.getRaw() <= 7935)
@@ -436,13 +446,31 @@ namespace kaleidoscope
         // This only executes if there was a previous superkey pressed and stored in last_super_key
         if (keyToggledOn(keyState))
         {
-          // A press of a foreign key interrupts the stacking of superkey taps, thus making the key collapse, depending on the time spent on it,
-          // it will turn into it's corresponding hold, or remain as a tap
+          // if (layer_shifted_)
+          // {
+          //   // mapped_key == keyFromKeymap(layer_shifted_number_, key_addr);
+          //   return EventHandlerResult::EVENT_CONSUMED;
+          // }
           if (interrupt(key_addr))
+          {
             mapped_key = Key_NoKey;
+          }
+          return EventHandlerResult::OK;
+          // A press of a foreign key interrupts the stacking of superkey taps, thus making the key collapse, depending on the time spent on it,
+          // it will turn into it's corresponding hold, or remain as a tap if (interrupt(key_addr)) mapped_key = Key_NoKey;
         }
+        // if (layer_shifted_)
+        // {
+        //   // uint8_t idx = last_super_key_.getRaw() - ranges::DYNAMIC_SUPER_FIRST;
+        //   // if (state_[idx].printonrelease)
+        //   // {
+        //   mapped_key = keyFromKeymap(layer_shifted_number_, key_addr);
+        //   // mapped_key = ::Layers.getKeyFromPROGMEM(layer_shifted_number_, key_addr);
+        //   // }
+        // }
         return EventHandlerResult::OK;
       }
+
       // get the superkey index of the received superkey
       uint8_t super_key_index = mapped_key.getRaw() - ranges::DYNAMIC_SUPER_FIRST;
 
@@ -493,9 +521,14 @@ namespace kaleidoscope
       {
         if (keyToggledOff(keyState))
         {
+          if (layer_shifted_ == true)
+          {
+            SuperKeys(super_key_index, last_super_addr_, state_[super_key_index].count, Release);
+          }
           // if the printonrelease flag is true, release the key
           if (state_[super_key_index].printonrelease || modifier_pressed_)
             interrupt(key_addr);
+          return EventHandlerResult::EVENT_CONSUMED;
           // if it's already triggered (so it emmited) release, if not, wait
           if (state_[super_key_index].triggered)
             release(super_key_index);
@@ -532,7 +565,7 @@ namespace kaleidoscope
 
     EventHandlerResult DynamicSuperKeys::onFocusEvent(const char *command)
     {
-      if (::Focus.handleHelp(command, PSTR("superkeys.map\nsuperkeys.waitfor\nsuperkeys.timeout\nsuperkeys.repeat")))
+      if (::Focus.handleHelp(command, PSTR("superkeys.map\nsuperkeys.waitfor\nsuperkeys.timeout\nsuperkeys.repeat\nsuperkeys.holdstart")))
         return EventHandlerResult::OK;
 
       if (strncmp_P(command, PSTR("superkeys."), 10) != 0)

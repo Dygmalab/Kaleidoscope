@@ -86,6 +86,8 @@ namespace kaleidoscope
       static Key last_super_key_;
       static KeyAddr last_super_addr_;
       static bool modifier_pressed_;
+      static bool layer_shifted_;
+      static uint8_t layer_shifted_number_;
 
       static void updateDynamicSuperKeysCache();
       static SuperType ReturnType(DynamicSuperKeys::SuperType previous, DynamicSuperKeys::ActionType action);
