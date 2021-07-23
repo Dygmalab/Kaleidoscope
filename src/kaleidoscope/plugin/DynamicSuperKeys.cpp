@@ -36,10 +36,10 @@ namespace kaleidoscope
     constexpr uint8_t DynamicSuperKeys::SUPER_KEY_COUNT;
     uint16_t DynamicSuperKeys::start_time_;
     uint16_t DynamicSuperKeys::delayed_time_;
-    uint16_t DynamicSuperKeys::wait_for = 500;
-    uint16_t DynamicSuperKeys::hold_start = 100;
-    uint8_t DynamicSuperKeys::repeat_interval = 20;
-    uint16_t DynamicSuperKeys::time_out = 200;
+    uint16_t DynamicSuperKeys::wait_for_ = 500;
+    uint16_t DynamicSuperKeys::hold_start_ = 200;
+    uint8_t DynamicSuperKeys::repeat_interval_ = 20;
+    uint16_t DynamicSuperKeys::time_out_ = 250;
     Key DynamicSuperKeys::last_super_key_ = Key_NoKey;
     KeyAddr DynamicSuperKeys::last_super_addr_;
     bool DynamicSuperKeys::modifier_pressed_ = false;
@@ -54,10 +54,36 @@ namespace kaleidoscope
 
       super_key_count_ = 0;
       map_[0] = 0;
+
+      uint16_t wait_for;
+      uint16_t time_out;
+      uint16_t hold_start;
+      uint8_t repeat_interval;
+
       Kaleidoscope.storage().get(storage_base_ + 0, wait_for);
+      if(wait_for != 65535){
+        DynamicSuperKeys::wait_for_ = wait_for;
+      }else{
+        Kaleidoscope.storage().update(storage_base_, DynamicSuperKeys::wait_for_);
+      }
       Kaleidoscope.storage().get(storage_base_ + 2, time_out);
+      if(time_out != 65535){
+        DynamicSuperKeys::time_out_ = time_out;
+      }else{
+        Kaleidoscope.storage().update(storage_base_, DynamicSuperKeys::time_out_);
+      }
       Kaleidoscope.storage().get(storage_base_ + 4, hold_start);
+      if(hold_start != 65535){
+        DynamicSuperKeys::hold_start_ = hold_start;
+      }else{
+        Kaleidoscope.storage().update(storage_base_, DynamicSuperKeys::hold_start_);
+      }
       Kaleidoscope.storage().get(storage_base_ + 6, repeat_interval);
+      if(repeat_interval < 251){
+        DynamicSuperKeys::repeat_interval_ = repeat_interval;
+      }else{
+        Kaleidoscope.storage().update(storage_base_, DynamicSuperKeys::repeat_interval_);
+      }
 
       while (pos < (storage_base_ + 7) + storage_size_)
       {
@@ -133,34 +159,33 @@ namespace kaleidoscope
 
       if (state_[idx].pressed)
       {
-        if (Runtime.hasTimeExpired(start_time_, hold_start) || state_[idx].printonrelease)
+        if (Runtime.hasTimeExpired(start_time_, hold_start_) || state_[idx].printonrelease)
         {
           hold();
           // kaleidoscope::Runtime.hid().keyboard().sendReport();
           return false;
         }
-      }
-
-      if (state_[idx].holded)
-      {
+        // releaseDelayed(start_time, Runtime.millisAtCycleStart())
+        if(Runtime.hasTimeExpired(start_time_, 100)){
+          hold();
+          return false;
+        } else {
+          SuperKeys(idx, last_super_addr_, state_[idx].count, Interrupt);
+          state_[idx].triggered = true;
+          return false;
+        }
+      } else {
+        if (!state_[idx].holded)
+        {
+          SuperKeys(idx, last_super_addr_, state_[idx].count, Interrupt);
+        }
         last_super_key_ = Key_NoKey;
         state_[idx].pressed = false;
         state_[idx].triggered = false;
         state_[idx].holded = false;
         state_[idx].count = None;
         state_[idx].release_next = false;
-        return true;
       }
-
-      SuperKeys(idx, last_super_addr_, state_[idx].count, Interrupt);
-      // release(idx);
-      last_super_key_ = Key_NoKey;
-      state_[idx].pressed = false;
-      state_[idx].triggered = false;
-      state_[idx].holded = false;
-      state_[idx].count = None;
-      state_[idx].release_next = false;
-      return true;
     }
 
     void DynamicSuperKeys::timeout(void)
@@ -171,19 +196,10 @@ namespace kaleidoscope
       {
         return;
       }
-
-      if (state_[idx].holded)
+      if (!state_[idx].holded)
       {
-        last_super_key_ = Key_NoKey;
-        state_[idx].pressed = false;
-        state_[idx].triggered = false;
-        state_[idx].holded = false;
-        state_[idx].count = None;
-        state_[idx].release_next = false;
-        return;
+        SuperKeys(idx, last_super_addr_, state_[idx].count, Timeout);
       }
-
-      SuperKeys(idx, last_super_addr_, state_[idx].count, Timeout);
       last_super_key_ = Key_NoKey;
       state_[idx].pressed = false;
       state_[idx].triggered = false;
@@ -342,11 +358,11 @@ namespace kaleidoscope
         }
         else
         {
-          if (Runtime.hasTimeExpired(delayed_time_, wait_for))
+          if (Runtime.hasTimeExpired(delayed_time_, wait_for_))
           {
             // if (key.getRaw() >= ranges::DYNAMIC_MACRO_FIRST && key.getRaw() <= ranges::DYNAMIC_MACRO_LAST)
             // {
-            //   delay(repeat_interval);
+            //   delay(repeat_interval_);
             //   ::DynamicMacros.play(key.getRaw() - ranges::DYNAMIC_MACRO_FIRST);
             //   break;
             // }
@@ -356,7 +372,7 @@ namespace kaleidoscope
             }
             if (key.getRaw() == 23785 || key.getRaw() == 23786)
             {
-              delay(repeat_interval);
+              delay(repeat_interval_);
               kaleidoscope::Runtime.hid().keyboard().sendReport();
             }
             if (key.getRaw() >= 256 && key.getRaw() <= 7935)
@@ -377,6 +393,10 @@ namespace kaleidoscope
         }
         if (key.getRaw() >= 256 && key.getRaw() <= 7935)
         {
+          // handleKeyswitchEvent(mod, key_addr, WAS_PRESSED | INJECTED);
+          handleKeyswitchEvent(key, key_addr, WAS_PRESSED | INJECTED);
+          // kaleidoscope::Runtime.hid().keyboard().sendReport();
+          // kaleidoscope::Runtime.hid().keyboard().releaseAllKeys();
           uint8_t modif = (key.getRaw() & 0xFF00) >> 8;
           if (modif & 0x01)
           {
@@ -398,10 +418,6 @@ namespace kaleidoscope
           {
             handleKeyswitchEvent(Key_LeftGui, key_addr, WAS_PRESSED | INJECTED);
           }
-          // handleKeyswitchEvent(mod, key_addr, WAS_PRESSED | INJECTED);
-          handleKeyswitchEvent(key, key_addr, WAS_PRESSED | INJECTED);
-          // kaleidoscope::Runtime.hid().keyboard().sendReport();
-          // kaleidoscope::Runtime.hid().keyboard().releaseAllKeys();
           break;
         }
 
@@ -535,7 +551,7 @@ namespace kaleidoscope
           return EventHandlerResult::EVENT_CONSUMED;
         }
 
-        if (Runtime.hasTimeExpired(start_time_, hold_start))
+        if (Runtime.hasTimeExpired(start_time_, hold_start_))
         {
           hold();
           return EventHandlerResult::EVENT_CONSUMED;
@@ -557,10 +573,38 @@ namespace kaleidoscope
       if (last_super_key_ == Key_NoKey)
         return EventHandlerResult::OK;
 
-      if (Runtime.hasTimeExpired(start_time_, time_out))
+      uint8_t idx = last_super_key_.getRaw() - ranges::DYNAMIC_SUPER_FIRST;
+
+      // if(state_[idx].release_next){
+      //     state_[idx].pressed = false;
+      //     state_[idx].triggered = false;
+      //     state_[idx].holded = false;
+      //     state_[idx].release_next = false;
+      //     state_[idx].count = None;
+      // }
+
+      if (Runtime.hasTimeExpired(start_time_, time_out_))
         timeout();
 
       return EventHandlerResult::OK;
+    }
+
+    // Return true if the release of the super key still needs to be delayed due to
+    // rollover. This is called when a super key is released before a subsequent key,
+    // and that key is still being held. It checks to see if the subsequent key has
+    // been held long enough that the super key should be flushed in its primary state
+    // (in which case we return `false`).
+    bool DynamicSuperKeys::releaseDelayed(uint16_t overlap_start,
+                                uint16_t overlap_end) {
+      // We want to calculate the timeout by dividing the overlap duration by the
+      // percentage required to make the super key take on its alternate state. Since
+      // we're doing integer arithmetic, we need to first multiply by 100, then
+      // divide by the percentage value (as an integer). We use 32-bit integers
+      // here to make sure it doesn't overflow when we multiply by 100.
+      // uint32_t overlap_duration = overlap_end - overlap_start;
+      // uint32_t release_timeout = (overlap_duration * 100) / overlap_threshold_;
+      // return !Runtime.hasTimeExpired(overlap_start, uint16_t(release_timeout));
+      return false;
     }
 
     EventHandlerResult DynamicSuperKeys::onFocusEvent(const char *command)
@@ -602,7 +646,7 @@ namespace kaleidoscope
       {
         if (::Focus.isEOL())
         {
-          ::Focus.send(DynamicSuperKeys::wait_for);
+          ::Focus.send(DynamicSuperKeys::wait_for_);
         }
         else
         {
@@ -617,7 +661,7 @@ namespace kaleidoscope
       {
         if (::Focus.isEOL())
         {
-          ::Focus.send(DynamicSuperKeys::time_out);
+          ::Focus.send(DynamicSuperKeys::time_out_);
         }
         else
         {
@@ -632,7 +676,7 @@ namespace kaleidoscope
       {
         if (::Focus.isEOL())
         {
-          ::Focus.send(DynamicSuperKeys::hold_start);
+          ::Focus.send(DynamicSuperKeys::hold_start_);
         }
         else
         {
@@ -647,7 +691,7 @@ namespace kaleidoscope
       {
         if (::Focus.isEOL())
         {
-          ::Focus.send(DynamicSuperKeys::repeat_interval);
+          ::Focus.send(DynamicSuperKeys::repeat_interval_);
         }
         else
         {

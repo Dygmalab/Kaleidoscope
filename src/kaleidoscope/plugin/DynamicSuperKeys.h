@@ -51,11 +51,6 @@ namespace kaleidoscope
 
       DynamicSuperKeys() {}
 
-      static uint16_t time_out;
-      static uint16_t wait_for;
-      static uint16_t hold_start;
-      static uint8_t repeat_interval;
-
       static bool SuperKeys(uint8_t tap_dance_index, KeyAddr key_addr, DynamicSuperKeys::SuperType tap_count, DynamicSuperKeys::ActionType tap_dance_action);
       EventHandlerResult onKeyswitchEvent(Key &mapped_key, KeyAddr key_addr, uint8_t keyState);
 
@@ -88,6 +83,10 @@ namespace kaleidoscope
       static bool modifier_pressed_;
       static bool layer_shifted_;
       static uint8_t layer_shifted_number_;
+      static uint16_t time_out_;
+      static uint16_t wait_for_;
+      static uint16_t hold_start_;
+      static uint8_t repeat_interval_;
 
       static void updateDynamicSuperKeysCache();
       static SuperType ReturnType(DynamicSuperKeys::SuperType previous, DynamicSuperKeys::ActionType action);
@@ -96,6 +95,7 @@ namespace kaleidoscope
       static bool interrupt(KeyAddr key_addr);
       static void timeout(void);
       static void release(uint8_t super_key_index);
+      static bool releaseDelayed(uint16_t overlap_start, uint16_t overlap_end);
     };
 
   }
