@@ -183,7 +183,8 @@ namespace kaleidoscope
 
       if (state_[idx].pressed)
       {
-        if ((Runtime.hasTimeExpired(start_time_, hold_start_) && releaseDelayed(last_start_time_, start_time_)) || state_[idx].printonrelease)
+        // if ((Runtime.hasTimeExpired(start_time_, hold_start_) && releaseDelayed(last_start_time_, start_time_)) || state_[idx].printonrelease)
+        if ((Runtime.hasTimeExpired(start_time_, hold_start_) && releaseDelayed(last_start_time_, start_time_)))
         {
           hold();
           // kaleidoscope::Runtime.hid().keyboard().sendReport();
@@ -569,6 +570,10 @@ namespace kaleidoscope
         if (!keyToggledOn(keyState))
         {
           interrupt(key_addr);
+          last_super_key_ = mapped_key;
+          last_super_addr_ = key_addr;
+
+          tap();
           return EventHandlerResult::EVENT_CONSUMED;
         }
         return EventHandlerResult::EVENT_CONSUMED;
