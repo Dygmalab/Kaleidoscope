@@ -184,7 +184,7 @@ namespace kaleidoscope
       if (state_[idx].pressed)
       {
         // if ((Runtime.hasTimeExpired(start_time_, hold_start_) && releaseDelayed(last_start_time_, start_time_)) || state_[idx].printonrelease)
-        if ((Runtime.hasTimeExpired(start_time_, hold_start_) && releaseDelayed(last_start_time_, start_time_)))
+        if ((Runtime.hasTimeExpired(start_time_, hold_start_)))
         {
           hold();
           // kaleidoscope::Runtime.hid().keyboard().sendReport();
@@ -603,7 +603,8 @@ namespace kaleidoscope
           // if it's already triggered (so it emmited) release, if not, wait
           return EventHandlerResult::EVENT_CONSUMED;
         }
-        if (Runtime.hasTimeExpired(start_time_, hold_start_) && releaseDelayed(last_start_time_, start_time_))
+        // if (Runtime.hasTimeExpired(start_time_, hold_start_) && releaseDelayed(last_start_time_, start_time_))
+        if (Runtime.hasTimeExpired(start_time_, hold_start_))
         {
           hold();
           return EventHandlerResult::EVENT_CONSUMED;
