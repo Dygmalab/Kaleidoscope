@@ -346,6 +346,11 @@ namespace kaleidoscope
       case DynamicSuperKeys::Hold:
         if (delayed_time_ == 0)
         {
+          if (key.getRaw() >= 17492 && key.getRaw() <= 17501)
+          {
+            ::Layer.move(key.getKeyCode() - LAYER_MOVE_OFFSET);
+            break;
+          }
           if (key.getRaw() >= 17450 && key.getRaw() <= 17459)
           {
             layer_shifted_ = true;
