@@ -246,6 +246,7 @@ namespace kaleidoscope
       state_[idx].holded = false;
       state_[idx].count = None;
       state_[idx].release_next = false;
+      start_time_ = 0;
       last_super_key_ = Key_NoKey;
     }
 
