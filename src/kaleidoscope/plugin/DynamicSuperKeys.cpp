@@ -301,6 +301,22 @@ namespace kaleidoscope
         break;
       case DynamicSuperKeys::Interrupt:
       case DynamicSuperKeys::Timeout:
+        if (key.getRaw() == 1)
+        {
+          if(tap_count == DynamicSuperKeys::Tap_Twice) {
+            Key key2;
+            uint16_t pos2 = map_[super_key_index - offset_];
+            Kaleidoscope.storage().get(storage_base_ + pos2 + 8, key2);
+            handleKeyswitchEvent(key2, key_addr, IS_PRESSED | INJECTED);
+            kaleidoscope::Runtime.hid().keyboard().sendReport();
+            handleKeyswitchEvent(key2, key_addr, WAS_PRESSED | INJECTED);
+            kaleidoscope::Runtime.hid().keyboard().sendReport();
+            handleKeyswitchEvent(key2, key_addr, IS_PRESSED | INJECTED);
+            kaleidoscope::Runtime.hid().keyboard().sendReport();
+            handleKeyswitchEvent(key2, key_addr, WAS_PRESSED | INJECTED);
+          }
+          break;
+        }
         if (key.getRaw() >= 17492 && key.getRaw() <= 17501)
         {
           ::Layer.move(key.getKeyCode() - LAYER_MOVE_OFFSET);
@@ -425,6 +441,22 @@ namespace kaleidoscope
         }
         break;
       case DynamicSuperKeys::Release:
+        if (key.getRaw() == 1)
+        {
+          if(tap_count == DynamicSuperKeys::Tap_Twice) {
+            Key key2;
+            uint16_t pos2 = map_[super_key_index - offset_];
+            Kaleidoscope.storage().get(storage_base_ + pos2 + 8, key2);
+            handleKeyswitchEvent(key2, key_addr, IS_PRESSED | INJECTED);
+            kaleidoscope::Runtime.hid().keyboard().sendReport();
+            handleKeyswitchEvent(key2, key_addr, WAS_PRESSED | INJECTED);
+            kaleidoscope::Runtime.hid().keyboard().sendReport();
+            handleKeyswitchEvent(key2, key_addr, IS_PRESSED | INJECTED);
+            kaleidoscope::Runtime.hid().keyboard().sendReport();
+            handleKeyswitchEvent(key2, key_addr, WAS_PRESSED | INJECTED);
+          }
+          break;
+        }
         if (key.getRaw() >= ranges::DYNAMIC_MACRO_FIRST && key.getRaw() <= ranges::DYNAMIC_MACRO_LAST)
         {
           break;
