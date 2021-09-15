@@ -443,18 +443,6 @@ namespace kaleidoscope
       case DynamicSuperKeys::Release:
         if (key.getRaw() == 1)
         {
-          // if(tap_count == DynamicSuperKeys::Tap_Twice) {
-          //   Key key2;
-          //   uint16_t pos2 = map_[super_key_index - offset_];
-          //   Kaleidoscope.storage().get(storage_base_ + pos2 + 8, key2);
-          //   handleKeyswitchEvent(key2, key_addr, IS_PRESSED | INJECTED);
-          //   kaleidoscope::Runtime.hid().keyboard().sendReport();
-          //   handleKeyswitchEvent(key2, key_addr, WAS_PRESSED | INJECTED);
-          //   kaleidoscope::Runtime.hid().keyboard().sendReport();
-          //   handleKeyswitchEvent(key2, key_addr, IS_PRESSED | INJECTED);
-          //   kaleidoscope::Runtime.hid().keyboard().sendReport();
-          //   handleKeyswitchEvent(key2, key_addr, WAS_PRESSED | INJECTED);
-          // }
           break;
         }
         if (key.getRaw() >= ranges::DYNAMIC_MACRO_FIRST && key.getRaw() <= ranges::DYNAMIC_MACRO_LAST)
@@ -519,17 +507,17 @@ namespace kaleidoscope
       if (mapped_key.getRaw() < ranges::DYNAMIC_SUPER_FIRST || mapped_key.getRaw() > ranges::DYNAMIC_SUPER_LAST)
       {
         // We detect any previously pressed modifiers to be able to release the configured tap or held key when pressed
-        if (mapped_key.getRaw() <= Key_RightGui.getRaw() && mapped_key.getRaw() >= Key_LeftControl.getRaw())
-        {
-          if (keyToggledOff(keyState))
-          {
-            modifier_pressed_ = false;
-          }
-          if (keyToggledOn(keyState))
-          {
-            modifier_pressed_ = true;
-          }
-        }
+        // if (mapped_key.getRaw() <= Key_RightGui.getRaw() && mapped_key.getRaw() >= Key_LeftControl.getRaw())
+        // {
+        //   if (keyToggledOff(keyState))
+        //   {
+        //     modifier_pressed_ = false;
+        //   }
+        //   if (keyToggledOn(keyState))
+        //   {
+        //     modifier_pressed_ = true;
+        //   }
+        // }
 
         // This is the way out when no superkey was pressed before this one.
         if (last_super_key_ == Key_NoKey)
@@ -605,9 +593,17 @@ namespace kaleidoscope
           return EventHandlerResult::EVENT_CONSUMED;
         }
 
-        if (!keyToggledOn(keyState))
+        if (keyToggledOn(keyState))
         {
-          interrupt(key_addr);
+          uint8_t last_super_key_index = last_super_key_.getRaw() - ranges::DYNAMIC_SUPER_FIRST;
+          if(state_[last_super_key_index].pressed == true)
+          {
+            hold();
+          }
+          else
+          {
+            release(last_super_key_index);
+          }
           last_super_key_ = mapped_key;
           last_super_addr_ = key_addr;
 
@@ -632,7 +628,8 @@ namespace kaleidoscope
           //   return EventHandlerResult::EVENT_CONSUMED;
           // }
           // if the printonrelease flag is true, release the key
-          if (state_[super_key_index].printonrelease || modifier_pressed_)
+          // if (state_[super_key_index].printonrelease || modifier_pressed_)
+          if (state_[super_key_index].printonrelease)
           {
             interrupt(key_addr);
             release(super_key_index);
