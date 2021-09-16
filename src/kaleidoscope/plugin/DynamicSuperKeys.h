@@ -92,9 +92,9 @@ namespace kaleidoscope
 
       static void updateDynamicSuperKeysCache();
       static SuperType ReturnType(DynamicSuperKeys::SuperType previous, DynamicSuperKeys::ActionType action);
-      static void tap(void);
+      static void tap(uint8_t super_key_index);
       static void hold(void);
-      static bool interrupt(KeyAddr key_addr);
+      static bool interrupt(uint8_t super_key_index);
       static void timeout(void);
       static void release(uint8_t super_key_index);
       static bool releaseDelayed(uint16_t overlap_start, uint16_t overlap_end);
