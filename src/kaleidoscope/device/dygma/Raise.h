@@ -259,7 +259,7 @@ typedef kaleidoscope::device::dygma::Raise Device;
   r2c0, r2c1, r2c2, r2c3, r2c4, r2c5,                       \
   r3c0, r3c1, r3c2, r3c3, r3c4, r3c5, r3c6,                 \
   r4c0, r4c1, r4c2, r4c3,                                   \
-  r4c4, r4c6, r4c6, r4c7,                                   \
+  r4c4, r4c6, r4c7, r4c8,                                   \
                                                             \
                 r0c10, r0c11, r0c12, r0c13, r0c14, r0c15,   \
           r1c9, r1c10, r1c11, r1c12, r1c13, r1c14, r1c15,   \
