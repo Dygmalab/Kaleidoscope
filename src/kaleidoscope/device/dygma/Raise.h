@@ -243,7 +243,7 @@ typedef kaleidoscope::device::dygma::Raise Device;
   r2c0, r2c1, r2c2, r2c3, r2c4, r2c5,                             r2c10, r2c11, r2c12, r2c13, r2c14, r2c15, \
   r3c0, r3c1, r3c2, r3c3, r3c4, r3c5, r3c6,                 r3c9, r3c10, r3c11, r3c12, r3c13, r3c14, r3c15, \
   r4c0, r4c1, r4c2, r4c3,                                                       r4c12, r4c13, r4c14, r4c15, \
-  r4c4, r4c5, r4c6, r4c7,                                                       r4c8,  r4c9,  r4c10, r4c11, \
+  r4c4, r4c5, r4c6, r4c7,                                                       r4c8,  r4c9,  r4c10, r4c11 \
   )                                                                                                         \
                                                                                                             \
     r0c0, r0c1, r0c2, r0c3, r0c4, r0c5, dflt, dflt, dflt, dflt, r0c10, r0c11, r0c12, r0c13, r0c14, r0c15,   \
@@ -259,14 +259,14 @@ typedef kaleidoscope::device::dygma::Raise Device;
   r2c0, r2c1, r2c2, r2c3, r2c4, r2c5,                       \
   r3c0, r3c1, r3c2, r3c3, r3c4, r3c5, r3c6,                 \
   r4c0, r4c1, r4c2, r4c3,                                   \
-  r4c4, r4c6, r4c7, r4c8,                                   \
+  r4c4, r4c5, r4c6, r4c7,                                   \
                                                             \
                 r0c10, r0c11, r0c12, r0c13, r0c14, r0c15,   \
           r1c9, r1c10, r1c11, r1c12, r1c13, r1c14, r1c15,   \
                 r2c10, r2c11, r2c12, r2c13, r2c14, r2c15,   \
           r3c9, r3c10, r3c11, r3c12, r3c13, r3c14, r3c15,   \
                               r4c12, r4c13, r4c14, r4c15,   \
-                                r4c8, r4c9, r4c10, r4c11,   \
+                                r4c8, r4c9, r4c10, r4c11   \
   )                                                         \
                                                             \
     r0c0, r0c1, r0c2, r0c3, r0c4, r0c5, dflt, dflt, dflt, dflt, r0c10, r0c11, r0c12, r0c13, r0c14, r0c15,   \
