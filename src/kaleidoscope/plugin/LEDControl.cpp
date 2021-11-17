@@ -112,6 +112,15 @@ void LEDControl::set_leds_to(uint8_t *led_index_array, cRGB color) {
   }
 }
 
+void LEDControl::get_leds_from(uint8_t *led_index_array) {
+  for(int i=0 ;i<sizeof(led_index_array)/sizeof(led_index_array[0]);i++){
+    if(led_index_array[i]>0){
+        cRGB c = LEDControl::getCrgbAt(led_index_array[i]);
+        ::Focus.send(c);
+    }
+  }
+}
+
 void LEDControl::setCrgbAt(uint8_t led_index, cRGB crgb) {
   Runtime.device().setCrgbAt(led_index, crgb);
 }
@@ -299,9 +308,16 @@ EventHandlerResult FocusLEDCommand::onFocusEvent(const char *command) {
        for(;iterator<131;iterator++){
          idx[iterator]=0;
        }
-       cRGB c;
-      ::Focus.read(c);
-      ::LEDControl.set_leds_to(idx, c);
+
+      if (::Focus.isEOL()) {
+        ::LEDControl.get_leds_from(idx);
+      } else {
+         cRGB c;
+         ::Focus.read(c);
+         ::LEDControl.set_leds_to(idx, c);
+      }
+
+      
     }else{
        ::Focus.send("Usege: led.setMultiple [1 2 3 4] 125 125 125");
     }
