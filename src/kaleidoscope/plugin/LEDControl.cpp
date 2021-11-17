@@ -105,6 +105,13 @@ void LEDControl::set_all_leds_to(cRGB color) {
   }
 }
 
+void LEDControl::set_leds_to(uint8_t *led_index_array, cRGB color) {
+  for(int i=0 ;i<sizeof(led_index_array)/sizeof(led_index_array[0]);i++){
+    if(led_index_array[i]>0)
+      setCrgbAt(led_index_array[i], color);
+  }
+}
+
 void LEDControl::setCrgbAt(uint8_t led_index, cRGB crgb) {
   Runtime.device().setCrgbAt(led_index, crgb);
 }
@@ -205,6 +212,7 @@ EventHandlerResult FocusLEDCommand::onFocusEvent(const char *command) {
     AT,
     THEME,
     BRIGHTNESS,
+    SETMULTIPLE,
   } subCommand;
 
   if (!Runtime.has_leds)
@@ -212,6 +220,7 @@ EventHandlerResult FocusLEDCommand::onFocusEvent(const char *command) {
 
   if (::Focus.handleHelp(command, PSTR("led.at\n"
                                        "led.setAll\n"
+                                       "led.setMultiple\n"
                                        "led.mode\n"
                                        "led.brightness\n"
                                        "led.theme")))
@@ -229,6 +238,8 @@ EventHandlerResult FocusLEDCommand::onFocusEvent(const char *command) {
     subCommand = THEME;
   else if (strcmp_P(command + 4, PSTR("brightness")) == 0)
     subCommand = BRIGHTNESS;
+  else if (strcmp_P(command + 4, PSTR("setMultiple")) == 0)
+    subCommand = SETMULTIPLE;
   else
     return EventHandlerResult::OK;
 
@@ -269,6 +280,31 @@ EventHandlerResult FocusLEDCommand::onFocusEvent(const char *command) {
 
     ::LEDControl.set_all_leds_to(c);
 
+    break;
+  }
+  case SETMULTIPLE:{
+    uint8_t idx[131]={};
+    char startSign = '[';
+    char endSign = ']';
+    char actual;
+    actual = ::Focus.peek();
+    if(actual == startSign){
+       actual = ::Focus.peek();
+       int iterator = 0;
+       while(actual!=endSign || ::Focus.isEOL()){
+         idx[iterator]=(int)actual - (int)48;
+         iterator++;
+         actual = ::Focus.peek();
+       }
+       for(;iterator<131;iterator++){
+         idx[iterator]=0;
+       }
+       cRGB c;
+      ::Focus.read(c);
+      ::LEDControl.set_leds_to(idx, c);
+    }else{
+       ::Focus.send("Usege: led.setMultiple [1 2 3 4] 125 125 125");
+    }
     break;
   }
   case MODE: {

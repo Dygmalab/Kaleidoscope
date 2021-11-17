@@ -85,6 +85,7 @@ class LEDControl : public kaleidoscope::Plugin {
 
   static void set_all_leds_to(uint8_t r, uint8_t g, uint8_t b);
   static void set_all_leds_to(cRGB color);
+  static void set_leds_to(uint8_t *led_index_array, cRGB color);
 
   // We restict activate to LEDModeInterface to make sure that
   // a compiler error is thrown when activate() is accidentally
