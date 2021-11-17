@@ -300,7 +300,7 @@ EventHandlerResult FocusLEDCommand::onFocusEvent(const char *command) {
     if(actual == startSign){
        actual = ::Focus.peek();
        int iterator = 0;
-       while(actual!=endSign || ::Focus.isEOL()){
+       while(actual!=endSign && !::Focus.isEOL()){
          idx[iterator]=(int)actual - (int)48;
          iterator++;
          actual = ::Focus.peek();
