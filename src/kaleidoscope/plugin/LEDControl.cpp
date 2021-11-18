@@ -105,26 +105,6 @@ void LEDControl::set_all_leds_to(cRGB color) {
   }
 }
 
-void LEDControl::set_leds_to(uint8_t *led_index_array, cRGB color) {
-  for(int i=0 ;i<132;i++){
-    if(led_index_array[i]<132){
-      setCrgbAt(led_index_array[i], color);
-    }
-  }
-}
-
-void LEDControl::get_leds_from(uint8_t *led_index_array) {
-  for(int i=0 ;i<132;i++){
-    if(led_index_array[i]<132){
-        cRGB c = LEDControl::getCrgbAt(led_index_array[i]);
-        ::Focus.send(led_index_array[i]);
-        ::Focus.send("#");
-        ::Focus.send(c);
-        ::Focus.send("\n");
-    }
-  }
-}
-
 void LEDControl::setCrgbAt(uint8_t led_index, cRGB crgb) {
   Runtime.device().setCrgbAt(led_index, crgb);
 }
@@ -226,6 +206,7 @@ EventHandlerResult FocusLEDCommand::onFocusEvent(const char *command) {
     THEME,
     BRIGHTNESS,
     SETMULTIPLE,
+    GETMULTIPLE,
   } subCommand;
 
   if (!Runtime.has_leds)
@@ -234,6 +215,7 @@ EventHandlerResult FocusLEDCommand::onFocusEvent(const char *command) {
   if (::Focus.handleHelp(command, PSTR("led.at\n"
                                        "led.setAll\n"
                                        "led.setMultiple\n"
+                                       "led.getMultiple\n"
                                        "led.mode\n"
                                        "led.brightness\n"
                                        "led.theme")))
@@ -253,6 +235,8 @@ EventHandlerResult FocusLEDCommand::onFocusEvent(const char *command) {
     subCommand = BRIGHTNESS;
   else if (strcmp_P(command + 4, PSTR("setMultiple")) == 0)
     subCommand = SETMULTIPLE;
+else if (strcmp_P(command + 4, PSTR("getMultiple")) == 0)
+    subCommand = GETMULTIPLE;
   else
     return EventHandlerResult::OK;
 
@@ -304,6 +288,18 @@ EventHandlerResult FocusLEDCommand::onFocusEvent(const char *command) {
       ::LEDControl.setCrgbAt(id, c);
     }
 
+    break;
+  }
+  case GETMULTIPLE:{
+    uint8_t id;
+    while(!::Focus.isEOL()){
+      ::Focus.read(id);
+      cRGB c = LEDControl::getCrgbAt(id);
+        ::Focus.send(id);
+        ::Focus.send("#");
+        ::Focus.send(c);
+        ::Focus.send("\n");
+    }
     break;
   }
   case MODE: {
