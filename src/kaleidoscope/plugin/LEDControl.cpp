@@ -105,17 +105,17 @@ void LEDControl::set_all_leds_to(cRGB color) {
   }
 }
 
-void LEDControl::set_leds_to(int8_t *led_index_array, cRGB color) {
+void LEDControl::set_leds_to(uint8_t *led_index_array, cRGB color) {
   ::Focus.send(color);
-  for(int i=0 ;i<131);i++){
-    if(led_index_array[i]>=0)
+  for(int i=0 ;i<132);i++){
+    if(led_index_array[i]>0)
       ::Focus.send(led_index_array[i]);
       setCrgbAt(led_index_array[i], color);
   }
 }
 
-void LEDControl::get_leds_from(int8_t *led_index_array) {
-  for(int i=0 ;i<sizeof(led_index_array)/sizeof(led_index_array[0]);i++){
+void LEDControl::get_leds_from(uint8_t *led_index_array) {
+  for(int i=0 ;i<132;i++){
     if(led_index_array[i]>0){
         cRGB c = LEDControl::getCrgbAt(led_index_array[i]);
         ::Focus.send(c);
@@ -294,9 +294,9 @@ EventHandlerResult FocusLEDCommand::onFocusEvent(const char *command) {
     break;
   }
   case SETMULTIPLE:{
-    int8_t idx[131]={-1};
-    int8_t endSign = 0;
-    int8_t actual;
+    uint8_t idx[132]={};
+    uint8_t endSign = 255;
+    uint8_t actual;
     ::Focus.read(actual);
     int iterator = 0;
     while(actual!=endSign && !::Focus.isEOL()){
