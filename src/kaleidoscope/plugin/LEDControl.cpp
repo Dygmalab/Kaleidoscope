@@ -296,27 +296,16 @@ EventHandlerResult FocusLEDCommand::onFocusEvent(const char *command) {
     break;
   }
   case SETMULTIPLE:{
-    uint8_t idx[132]={};
-    uint8_t endSign = 132;
-    uint8_t actual;
-    int iterator = 0;
-    ::Focus.read(actual);
-    while(actual!=endSign && !::Focus.isEOL()){
-      idx[iterator]=actual;
-      iterator++;
-      ::Focus.read(actual);
-    }
-    for(;iterator<132;iterator++){
-      idx[iterator]=( uint8_t)132;
+    uint8_t id;
+    cRGB c = {0, 0, 0};
+    ::Focus.read(c);
+    ::Focus.send(c);
+    while(!::Focus.isEOL()){
+      ::Focus.read(id);
+      ::Focus.send(id);
+      ::LEDControl.setCrgbAt(id, c);
     }
 
-    if (::Focus.isEOL()) {
-      ::LEDControl.get_leds_from(idx);
-    } else {
-      cRGB c;
-      ::Focus.read(c);
-      ::LEDControl.set_leds_to(idx, c);
-    }
     break;
   }
   case MODE: {
