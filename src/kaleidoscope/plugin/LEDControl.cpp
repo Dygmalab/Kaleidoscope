@@ -106,10 +106,8 @@ void LEDControl::set_all_leds_to(cRGB color) {
 }
 
 void LEDControl::set_leds_to(uint8_t *led_index_array, cRGB color) {
-  ::Focus.send(color);
   for(int i=0 ;i<132;i++){
-    if(led_index_array[i]>0)
-      ::Focus.send(led_index_array[i]);
+    if(led_index_array[i]>=0)
       setCrgbAt(led_index_array[i], color);
   }
 }
