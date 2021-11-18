@@ -299,10 +299,8 @@ EventHandlerResult FocusLEDCommand::onFocusEvent(const char *command) {
     uint8_t id;
     cRGB c = {0, 0, 0};
     ::Focus.read(c);
-    ::Focus.send(c);
     while(!::Focus.isEOL()){
       ::Focus.read(id);
-      ::Focus.send(id);
       ::LEDControl.setCrgbAt(id, c);
     }
 
