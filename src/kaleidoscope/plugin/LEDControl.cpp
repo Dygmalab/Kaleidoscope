@@ -291,7 +291,7 @@ else if (strcmp_P(command + 4, PSTR("getMultiple")) == 0)
     break;
   }
   case GETMULTIPLE:{
-    uint8_t id;
+    uint8_t id; 
     while(!::Focus.isEOL()){
       ::Focus.read(id);
       cRGB c = LEDControl::getCrgbAt(id);
