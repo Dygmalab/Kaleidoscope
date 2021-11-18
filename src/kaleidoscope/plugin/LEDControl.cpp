@@ -106,8 +106,10 @@ void LEDControl::set_all_leds_to(cRGB color) {
 }
 
 void LEDControl::set_leds_to(uint8_t *led_index_array, cRGB color) {
+  ::Focus.send(color);
   for(int i=0 ;i<sizeof(led_index_array)/sizeof(led_index_array[0]);i++){
     if(led_index_array[i]>0)
+      ::Focus.send(led_index_array[i]);
       setCrgbAt(led_index_array[i], color);
   }
 }
@@ -293,33 +295,25 @@ EventHandlerResult FocusLEDCommand::onFocusEvent(const char *command) {
   }
   case SETMULTIPLE:{
     uint8_t idx[131]={};
-    char startSign = '[';
-    char endSign = ']';
-    char actual;
-    actual = ::Focus.peek();
-    if(actual == startSign){
-       actual = ::Focus.peek();
-       int iterator = 0;
-       while(actual!=endSign && !::Focus.isEOL()){
-         idx[iterator]=(int)actual - (int)48;
-         iterator++;
-         actual = ::Focus.peek();
-       }
-       for(;iterator<131;iterator++){
-         idx[iterator]=0;
-       }
+    uint8_t endSign = 0;
+    uint8_t actual;
+    ::Focus.read(actual);
+    int iterator = 0;
+    while(actual!=endSign && !::Focus.isEOL()){
+      idx[iterator]=actual;
+      iterator++;
+      ::Focus.read(actual);
+    }
+    for(;iterator<131;iterator++){
+      idx[iterator]=0;
+    }
 
-      if (::Focus.isEOL()) {
-        ::LEDControl.get_leds_from(idx);
-      } else {
-         cRGB c;
-         ::Focus.read(c);
-         ::LEDControl.set_leds_to(idx, c);
-      }
-
-      
-    }else{
-       ::Focus.send("Usege: led.setMultiple [1 2 3 4] 125 125 125");
+    if (::Focus.isEOL()) {
+      ::LEDControl.get_leds_from(idx);
+    } else {
+      cRGB c;
+      ::Focus.read(c);
+      ::LEDControl.set_leds_to(idx, c);
     }
     break;
   }
