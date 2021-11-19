@@ -496,13 +496,13 @@ EventHandlerResult Qukeys::onFocusEvent(const char *command)
 
 EventHandlerResult Qukeys::onSetup()
 {
-  uint8_t size = 3 * sizeof(uint8_t);
+  uint16_t size = 3;
   Qukeys::storage_base_ = ::EEPROMSettings.requestSlice(size);
   uint16_t hold;
   uint8_t overlap;
 
   Runtime.storage().get(storage_base_, hold);
-  if(hold != 65535){
+  if(hold < 60001){
     Qukeys::hold_timeout_ = hold;
   }else{
     Runtime.storage().update(storage_base_, Qukeys::hold_timeout_);

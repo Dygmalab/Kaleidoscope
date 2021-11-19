@@ -268,12 +268,13 @@ namespace kaleidoscope
                                                        KeyAddr key_addr,
                                                        uint8_t keyState)
     {
-      if (mappedKey.getFlags() != (SYNTHETIC | B00100000))
+      if (mappedKey.getRaw() < ranges::DYNAMIC_MACRO_FIRST || mappedKey.getRaw() > ranges::DYNAMIC_MACRO_LAST) {
         return EventHandlerResult::OK;
+      }
 
       if (keyToggledOn(keyState))
       {
-        play(mappedKey.getKeyCode());
+        play(mappedKey.getRaw() - ranges::DYNAMIC_MACRO_FIRST);
       }
 
       return EventHandlerResult::EVENT_CONSUMED;
