@@ -177,9 +177,9 @@ namespace kaleidoscope
 
     // --- actions ---
 
-    bool DynamicSuperKeys::interrupt(uint8_t idx)
+    bool DynamicSuperKeys::interrupt(KeyAddr key_addr)
     {
-      // uint8_t idx = last_super_key_.getRaw() - ranges::DYNAMIC_SUPER_FIRST;
+      uint8_t idx = last_super_key_.getRaw() - ranges::DYNAMIC_SUPER_FIRST;
 
       if (state_[idx].pressed)
       {
@@ -237,9 +237,9 @@ namespace kaleidoscope
       state_[idx].release_next = false;
     }
 
-    void DynamicSuperKeys::release(uint8_t idx)
+    void DynamicSuperKeys::release(uint8_t super_key_index)
     {
-      // uint8_t idx = last_super_key_.getRaw() - ranges::DYNAMIC_SUPER_FIRST;
+      uint8_t idx = last_super_key_.getRaw() - ranges::DYNAMIC_SUPER_FIRST;
       SuperKeys(idx, last_super_addr_, state_[idx].count, Release);
       state_[idx].pressed = false;
       state_[idx].triggered = false;
@@ -250,11 +250,11 @@ namespace kaleidoscope
       last_super_key_ = Key_NoKey;
     }
 
-    void DynamicSuperKeys::tap(uint8_t super_key_index)
+    void DynamicSuperKeys::tap(void)
     {
-      // uint8_t idx = last_super_key_.getRaw() - ranges::DYNAMIC_SUPER_FIRST;
+      uint8_t idx = last_super_key_.getRaw() - ranges::DYNAMIC_SUPER_FIRST;
 
-      state_[super_key_index].count = DynamicSuperKeys::ReturnType(state_[super_key_index].count, Tap);
+      state_[idx].count = DynamicSuperKeys::ReturnType(state_[idx].count, Tap);
       start_time_ = Runtime.millisAtCycleStart();
 
       // SuperKeys(idx, last_super_addr_, state_[idx].count, Tap);
@@ -443,6 +443,18 @@ namespace kaleidoscope
       case DynamicSuperKeys::Release:
         if (key.getRaw() == 1)
         {
+          // if(tap_count == DynamicSuperKeys::Tap_Twice) {
+          //   Key key2;
+          //   uint16_t pos2 = map_[super_key_index - offset_];
+          //   Kaleidoscope.storage().get(storage_base_ + pos2 + 8, key2);
+          //   handleKeyswitchEvent(key2, key_addr, IS_PRESSED | INJECTED);
+          //   kaleidoscope::Runtime.hid().keyboard().sendReport();
+          //   handleKeyswitchEvent(key2, key_addr, WAS_PRESSED | INJECTED);
+          //   kaleidoscope::Runtime.hid().keyboard().sendReport();
+          //   handleKeyswitchEvent(key2, key_addr, IS_PRESSED | INJECTED);
+          //   kaleidoscope::Runtime.hid().keyboard().sendReport();
+          //   handleKeyswitchEvent(key2, key_addr, WAS_PRESSED | INJECTED);
+          // }
           break;
         }
         if (key.getRaw() >= ranges::DYNAMIC_MACRO_FIRST && key.getRaw() <= ranges::DYNAMIC_MACRO_LAST)
@@ -507,17 +519,17 @@ namespace kaleidoscope
       if (mapped_key.getRaw() < ranges::DYNAMIC_SUPER_FIRST || mapped_key.getRaw() > ranges::DYNAMIC_SUPER_LAST)
       {
         // We detect any previously pressed modifiers to be able to release the configured tap or held key when pressed
-        // if (mapped_key.getRaw() <= Key_RightGui.getRaw() && mapped_key.getRaw() >= Key_LeftControl.getRaw())
-        // {
-        //   if (keyToggledOff(keyState))
-        //   {
-        //     modifier_pressed_ = false;
-        //   }
-        //   if (keyToggledOn(keyState))
-        //   {
-        //     modifier_pressed_ = true;
-        //   }
-        // }
+        if (mapped_key.getRaw() <= Key_RightGui.getRaw() && mapped_key.getRaw() >= Key_LeftControl.getRaw())
+        {
+          if (keyToggledOff(keyState))
+          {
+            modifier_pressed_ = false;
+          }
+          if (keyToggledOn(keyState))
+          {
+            modifier_pressed_ = true;
+          }
+        }
 
         // This is the way out when no superkey was pressed before this one.
         if (last_super_key_ == Key_NoKey)
@@ -534,8 +546,7 @@ namespace kaleidoscope
           //   // mapped_key == keyFromKeymap(layer_shifted_number_, key_addr);
           //   return EventHandlerResult::EVENT_CONSUMED;
           // }
-          uint8_t idx = last_super_key_.getRaw() - ranges::DYNAMIC_SUPER_FIRST;
-          if (interrupt(idx))
+          if (interrupt(key_addr))
           {
             mapped_key = Key_NoKey;
           }
@@ -580,7 +591,7 @@ namespace kaleidoscope
           last_super_key_ = mapped_key;
           last_super_addr_ = key_addr;
 
-          tap(super_key_index);
+          tap();
         }
         return EventHandlerResult::EVENT_CONSUMED;
       }
@@ -596,15 +607,11 @@ namespace kaleidoscope
 
         if (!keyToggledOn(keyState))
         {
-          uint8_t idx = last_super_key_.getRaw() - ranges::DYNAMIC_SUPER_FIRST;
-          interrupt(idx);
+          interrupt(key_addr);
           last_super_key_ = mapped_key;
           last_super_addr_ = key_addr;
-          return EventHandlerResult::EVENT_CONSUMED;
-        }
-        if (keyToggledOn(keyState))
-        {
-          tap(super_key_index);
+
+          tap();
           return EventHandlerResult::EVENT_CONSUMED;
         }
         return EventHandlerResult::EVENT_CONSUMED;
@@ -614,7 +621,7 @@ namespace kaleidoscope
       {
         if (keyToggledOn(keyState))
         {
-          tap(super_key_index);
+          tap();
           return EventHandlerResult::EVENT_CONSUMED;
         }
         if (keyToggledOff(keyState))
@@ -625,10 +632,9 @@ namespace kaleidoscope
           //   return EventHandlerResult::EVENT_CONSUMED;
           // }
           // if the printonrelease flag is true, release the key
-          // if (state_[super_key_index].printonrelease || modifier_pressed_)
-          if (state_[super_key_index].printonrelease)
+          if (state_[super_key_index].printonrelease || modifier_pressed_)
           {
-            interrupt(super_key_index);
+            interrupt(key_addr);
             release(super_key_index);
             return EventHandlerResult::EVENT_CONSUMED;
           }
