@@ -80,10 +80,38 @@ namespace kaleidoscope
           delay(1000);
           c -= 1;
         }
+#ifdef ARDUINO_SAMD_RAISE
         if (!WDT->STATUS.bit.SYNCBUSY) // Check if the WDT registers are synchronized
         {
           REG_WDT_CLEAR = WDT_CLEAR_CLEAR_KEY; // Clear the watchdog timer
         }
+#endif
+      }
+    }
+
+    void customDelay(uint16_t randomA, uint16_t randomB)
+    {
+      uint16_t random = random(randomA, randomB);
+      int c = (int)random / 1000;
+      int d = random % 1000;
+      while (c >= 0)
+      {
+        if (c == 0)
+        {
+          delay(d);
+          c -= 1;
+        }
+        else
+        {
+          delay(1000);
+          c -= 1;
+        }
+#ifdef ARDUINO_SAMD_RAISE
+        if (!WDT->STATUS.bit.SYNCBUSY) // Check if the WDT registers are synchronized
+        {
+          REG_WDT_CLEAR = WDT_CLEAR_CLEAR_KEY; // Clear the watchdog timer
+        }
+#endif
       }
     }
 
@@ -161,6 +189,8 @@ namespace kaleidoscope
     void DynamicMacros::play(uint8_t macro_id)
     {
       macro_t macro = MACRO_ACTION_END;
+      uint16_t randomA = 0;
+      uint16_t randomB = 0;
       uint16_t interval = 0;
       uint8_t flags;
       bool explicit_report = false;
@@ -184,9 +214,13 @@ namespace kaleidoscope
           break;
         case MACRO_ACTION_STEP_INTERVAL:
         {
-          uint8_t inter1 = Runtime.storage().read(pos++);
-          uint8_t inter2 = Runtime.storage().read(pos++);
-          interval = (inter1 << 8) | inter2;
+          uint8_t rnd1 = Runtime.storage().read(pos++);
+          uint8_t rnd2 = Runtime.storage().read(pos++);
+          uint8_t rnd3 = Runtime.storage().read(pos++);
+          uint8_t rnd4 = Runtime.storage().read(pos++);
+          randomA = (rnd1 << 8) | rnd2;
+          randomB = (rnd3 << 8) | rnd4;
+          randomDelay(randomA, randomB);
           break;
         }
         case MACRO_ACTION_STEP_WAIT:
@@ -268,7 +302,8 @@ namespace kaleidoscope
                                                        KeyAddr key_addr,
                                                        uint8_t keyState)
     {
-      if (mappedKey.getRaw() < ranges::DYNAMIC_MACRO_FIRST || mappedKey.getRaw() > ranges::DYNAMIC_MACRO_LAST) {
+      if (mappedKey.getRaw() < ranges::DYNAMIC_MACRO_FIRST || mappedKey.getRaw() > ranges::DYNAMIC_MACRO_LAST)
+      {
         return EventHandlerResult::OK;
       }
 
