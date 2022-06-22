@@ -89,11 +89,11 @@ namespace kaleidoscope
       }
     }
 
-    void customDelay(uint16_t randomA, uint16_t randomB)
+    void randomDelay(uint16_t randomA, uint16_t randomB)
     {
-      uint16_t random = random(randomA, randomB);
-      int c = (int)random / 1000;
-      int d = random % 1000;
+      int rnd = random(randomA, randomB);
+      int c = (int)rnd / 1000;
+      int d = rnd % 1000;
       while (c >= 0)
       {
         if (c == 0)
