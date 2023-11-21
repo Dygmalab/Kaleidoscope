@@ -1085,9 +1085,9 @@ void DynamicSuperKeys::removeKey(Key key)
             if (i != keys_index - 1)
             {
                 memmove(&keys[i], &keys[i + 1], (keys_index - i - 1) * sizeof(KeyValue));
-                keys_index--;
-                break;
             }
+            keys_index--;
+            break;
         }
     }
     if (keys_index == 0)
