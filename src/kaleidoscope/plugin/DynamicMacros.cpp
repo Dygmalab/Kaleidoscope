@@ -144,6 +144,8 @@ namespace kaleidoscope
           pos++;
           break;
 
+        case MACRO_ACTION_STEP_INTERVAL:
+        case MACRO_ACTION_STEP_WAIT:
         case MACRO_ACTION_STEP_KEYDOWN:
         case MACRO_ACTION_STEP_KEYUP:
         case MACRO_ACTION_STEP_TAP:
