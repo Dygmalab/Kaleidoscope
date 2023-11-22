@@ -1069,24 +1069,25 @@ void DynamicSuperKeys::addKey(Key key, KeyAddr keyAddr, DynamicSuperKeys::SuperK
 
 void DynamicSuperKeys::removeKey(Key key)
 {
-    // NRF_LOG_DEBUG("SK list antes del remove");
-    // NRF_LOG_DEBUG("*****************");
-    // for (const auto &element : keys)
-    //{
-    // NRF_LOG_DEBUG("[%i]",element.index);
-    //}
-    // NRF_LOG_DEBUG("*****************");
+    //     NRF_LOG_DEBUG("SK list antes del remove");
+    //     NRF_LOG_DEBUG("*****************");
+    //     for (const auto &element : keys)
+    //    {
+    //     NRF_LOG_DEBUG("[%i]",element.index);
+    //    }
+    //     NRF_LOG_DEBUG("*****************");
     uint8_t index = key.getRaw() - ranges::DYNAMIC_SUPER_FIRST;
     for (int i = 0; i < keys_index; ++i)
     {
         if (keys[i].index == index)
         {
             // Now we have to remove and move the rest of them only if it is not the last element.
-            if (i != keys_index - 1)
-            {
-                memmove(&keys[i], &keys[i + 1], (keys_index - i - 1) * sizeof(KeyValue));
-            }
             keys_index--;
+            memset(&keys[i], 0, sizeof(KeyValue));
+            if (i != keys_index)
+            {
+                memmove(&keys[i], &keys[i + 1], (keys_index - i) * sizeof(KeyValue));
+            }
             break;
         }
     }
@@ -1094,13 +1095,14 @@ void DynamicSuperKeys::removeKey(Key key)
     {
         last_super_key_ = Key_NoKey;
     }
-    // NRF_LOG_DEBUG("SK list DESPUES del remove");
-    // NRF_LOG_DEBUG("*****************");
-    // for (const auto &element : keys)
-    //{
-    // NRF_LOG_DEBUG("[%i]",element.index);
-    //}
-    // NRF_LOG_DEBUG("*****************");
+    //     NRF_LOG_DEBUG("SK list DESPUES del remove");
+    //     NRF_LOG_DEBUG("*****************");
+    //     for (const auto &element : keys)
+    //    {
+    //     NRF_LOG_DEBUG("[%i]",element.index);
+    //    }
+    //     NRF_LOG_DEBUG("*****************");
+    //     NRF_LOG_FLUSH();
 }
 
 __attribute__((unused)) Key DynamicSuperKeys::findKey(uint8_t index)
