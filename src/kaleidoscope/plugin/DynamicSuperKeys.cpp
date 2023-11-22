@@ -1,18 +1,18 @@
 /* DynamicSuperKeys - Dynamic macro support for Kaleidoscope.
- * Copyright (C) 2019  Keyboard.io, Inc.
- *
- * This program is free software: you can redistribute it and/or modify it under
- * the terms of the GNU General Public License as published by the Free Software
- * Foundation, version 3.
- *
- * This program is distributed in the hope that it will be useful, but WITHOUT
- * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
- * FOR A PARTICULAR PURPOSE. See the GNU General Public License for more
- * details.
- *
- * You should have received a copy of the GNU General Public License along with
- * this program. If not, see <http://www.gnu.org/licenses/>.
- */
+* Copyright (C) 2019  Keyboard.io, Inc.
+*
+* This program is free software: you can redistribute it and/or modify it under
+* the terms of the GNU General Public License as published by the Free Software
+* Foundation, version 3.
+*
+* This program is distributed in the hope that it will be useful, but WITHOUT
+* ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
+* FOR A PARTICULAR PURPOSE. See the GNU General Public License for more
+* details.
+*
+* You should have received a copy of the GNU General Public License along with
+* this program. If not, see <http://www.gnu.org/licenses/>.
+*/
 
 #include "Kaleidoscope-DynamicMacros.h"
 #include "Kaleidoscope-DynamicSuperKeys.h"
@@ -681,9 +681,9 @@ EventHandlerResult DynamicSuperKeys::onKeyswitchEvent(Key &mapped_key, KeyAddr k
                 // For example, If we press a SHIFT and an "a" which is a super-key, we will interrupt the SK and the result will be A.
                 if (lowerKeyIsModifier(key_id) && keys_index != 0)
                 {
-                    for (const auto &superkey : keys)
+                    for (int i = 0; i < keys_index; ++i)
                     {
-                        if (!superkey.state.has_modifier_in_action && !superkey.state.is_layer_shifting) interrupt(superkey.key, superkey.keyAddr);
+                        if (!keys[i].state.has_modifier_in_action && !keys[i].state.is_layer_shifting) interrupt(keys[i].key, keys[i].keyAddr);
                     }
                 }
                 modifier_pressed_ = false;
@@ -708,11 +708,11 @@ EventHandlerResult DynamicSuperKeys::onKeyswitchEvent(Key &mapped_key, KeyAddr k
             // This only executing if there was a previous super-key pressed
             if (keyToggledOn(keyState))
             {
-                for (const auto &superkey : keys)
+                for (int i = 0; i < keys_index; ++i)
                 {
-                    if (!superkey.state.has_modifier_in_action && !superkey.state.is_layer_shifting)
+                    if (!keys[i].state.has_modifier_in_action && !keys[i].state.is_layer_shifting)
                     {
-                        interrupt(superkey.key, superkey.keyAddr);
+                        interrupt(keys[i].key, keys[i].keyAddr);
                     }
                 }
                 return EventHandlerResult::OK;
@@ -836,10 +836,10 @@ EventHandlerResult DynamicSuperKeys::onKeyswitchEvent(Key &mapped_key, KeyAddr k
                         fast_key_release = true;
                         state_[actual_super_key.index].released = true;
                         state_[actual_super_key.index].has_modifier_in_action = false;
-                        for (const auto &superkey : keys)
+                        for (int i = 0; i < keys_index; ++i)
                         {
-                            state_[superkey.index].holded = false;
-                            timeout(superkey.key, superkey.keyAddr);
+                            state_[keys[i].index].holded = false;
+                            timeout(keys[i].key, keys[i].keyAddr);
                         }
                         return EventHandlerResult::EVENT_CONSUMED;
                     }
@@ -893,19 +893,19 @@ EventHandlerResult DynamicSuperKeys::beforeReportingState()
     if (!fast_key_release)
     {
         // If we tap the SK. A time-out has to expire in order to send the Key to the OS.
-        for (const auto &superkey : keys)
+        for (int i = 0; i < keys_index; ++i)
         {
-            if (state_[superkey.index].start_time > 0 && Runtime.hasTimeExpired(state_[superkey.index].start_time, time_out_))
+            if (state_[keys[i].index].start_time > 0 && Runtime.hasTimeExpired(state_[keys[i].index].start_time, time_out_))
             {
-                timeout(superkey.key, superkey.keyAddr);
+                timeout(keys[i].key, keys[i].keyAddr);
             }
         }
     }
     else
     {
-        for (const auto &superkey : keys)
+        for (int i = 0; i < keys_index; ++i)
         {
-            timeout(superkey.key, superkey.keyAddr);
+            timeout(keys[i].key, keys[i].keyAddr);
         }
     }
     return EventHandlerResult::OK;
@@ -1038,9 +1038,9 @@ void DynamicSuperKeys::addKey(Key key, KeyAddr keyAddr, DynamicSuperKeys::SuperK
 {
     uint8_t index = key.getRaw() - ranges::DYNAMIC_SUPER_FIRST;
     bool exists = false;
-    for (const auto &element : keys)
+    for (int i = 0; i < keys_index; ++i)
     {
-        if (element.index == index)
+        if (keys[i].index == index)
         {
             exists = true;
             break;
@@ -1069,13 +1069,13 @@ void DynamicSuperKeys::addKey(Key key, KeyAddr keyAddr, DynamicSuperKeys::SuperK
 
 void DynamicSuperKeys::removeKey(Key key)
 {
-    //     NRF_LOG_DEBUG("SK list antes del remove");
-    //     NRF_LOG_DEBUG("*****************");
-    //     for (const auto &element : keys)
-    //    {
-    //     NRF_LOG_DEBUG("[%i]",element.index);
-    //    }
-    //     NRF_LOG_DEBUG("*****************");
+    /*         NRF_LOG_DEBUG("SK list antes del remove");
+             NRF_LOG_DEBUG("*****************");
+             for (const auto &element : keys)
+            {
+             NRF_LOG_DEBUG("[%i]",element.index);
+            }
+             NRF_LOG_DEBUG("*****************");*/
     uint8_t index = key.getRaw() - ranges::DYNAMIC_SUPER_FIRST;
     for (int i = 0; i < keys_index; ++i)
     {
@@ -1095,14 +1095,14 @@ void DynamicSuperKeys::removeKey(Key key)
     {
         last_super_key_ = Key_NoKey;
     }
-    //     NRF_LOG_DEBUG("SK list DESPUES del remove");
-    //     NRF_LOG_DEBUG("*****************");
-    //     for (const auto &element : keys)
-    //    {
-    //     NRF_LOG_DEBUG("[%i]",element.index);
-    //    }
-    //     NRF_LOG_DEBUG("*****************");
-    //     NRF_LOG_FLUSH();
+    /*         NRF_LOG_DEBUG("SK list DESPUES del remove");
+             NRF_LOG_DEBUG("*****************");
+             for (const auto &element : keys)
+            {
+             NRF_LOG_DEBUG("[%i]",element.index);
+            }
+             NRF_LOG_DEBUG("*****************");
+             NRF_LOG_FLUSH();*/
 }
 
 __attribute__((unused)) Key DynamicSuperKeys::findKey(uint8_t index)
@@ -1121,11 +1121,11 @@ __attribute__((unused)) Key DynamicSuperKeys::findKey(uint8_t index)
 void DynamicSuperKeys::updateKey(Key key, const DynamicSuperKeys::SuperKeyState &new_state)
 {
     uint8_t index = key.getRaw() - ranges::DYNAMIC_SUPER_FIRST;
-    for (auto &key_entry : keys)
+    for (int i = 0; i < keys_index; ++i)
     {
-        if (key_entry.index == index)
+        if (keys[i].index == index)
         {
-            key_entry.state = new_state;
+            keys[i].state = new_state;
             return;
         }
     }
@@ -1177,13 +1177,13 @@ DynamicSuperKeys::KeyValue DynamicSuperKeys::getNextSuperKey()
     return key_value;
 }
 
-void DynamicSuperKeys::flush_superkeys()
+__attribute__((unused)) void DynamicSuperKeys::flush_superkeys()
 {
-    for (auto &superkey : keys)
+    for (int i = 0; i < keys_index; ++i)
     {
-        if (superkey.state.is_layer_shifting && superkey.state.has_modifier_in_action)
+        if (keys[i].state.is_layer_shifting && keys[i].state.has_modifier_in_action)
         {
-            interrupt(superkey.key, superkey.keyAddr);
+            interrupt(keys[i].key, keys[i].keyAddr);
         }
     }
 }
