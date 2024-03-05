@@ -443,7 +443,7 @@ bool isModifierKey(Key key) {
 
 EventHandlerResult Qukeys::onFocusEvent(const char *command)
 {
-  if (::Focus.handleHelp(command, PSTR("qukeys.holdTimeout\nqukeys.overlapThreshold")))
+  if (::Focus.handleHelp(command, PSTR("qukeys.holdTimeout\nqukeys.overlapThreshold\nqukeys.minimumHoldTime\nqukeys.minimumPriorInterval")))
     return EventHandlerResult::OK;
 
   if (strncmp_P(command, PSTR("qukeys."), 7) != 0)
@@ -490,16 +490,52 @@ EventHandlerResult Qukeys::onFocusEvent(const char *command)
       Runtime.storage().commit();
     }
   }
+  
+  if (strcmp_P(command + 7, PSTR("minimumHoldTime")) == 0)
+  {
+    if (::Focus.isEOL())
+    {
+      ::Focus.send(Qukeys::minimum_hold_time_);
+    }
+    else
+    {
+      uint8_t minimum;
+      ::Focus.read(minimum);
+      Qukeys::minimum_hold_time_ = minimum;
+
+      Runtime.storage().update(storage_base_ + 3, minimum);
+      Runtime.storage().commit();
+    }
+  }
+
+  if (strcmp_P(command + 7, PSTR("minimumPriorInterval")) == 0)
+  {
+    if (::Focus.isEOL())
+    {
+      ::Focus.send(Qukeys::minimum_prior_interval_);
+    }
+    else
+    {
+      uint8_t prior;
+      ::Focus.read(prior);
+      Qukeys::minimum_prior_interval_ = prior;
+
+      Runtime.storage().update(storage_base_ + 4, prior);
+      Runtime.storage().commit();
+    }
+  }
 
   return EventHandlerResult::EVENT_CONSUMED;
 }
 
 EventHandlerResult Qukeys::onSetup()
 {
-  uint16_t size = 3;
+  uint16_t size = 5;
   Qukeys::storage_base_ = ::EEPROMSettings.requestSlice(size);
   uint16_t hold;
   uint8_t overlap;
+  uint8_t minimum;
+  uint8_t prior;
 
   Runtime.storage().get(storage_base_, hold);
   if(hold < 60001){
@@ -513,6 +549,20 @@ EventHandlerResult Qukeys::onSetup()
     Qukeys::overlap_threshold_ = overlap;
   }else{
     Runtime.storage().update(storage_base_ + 2, Qukeys::overlap_threshold_);
+  }
+
+  Runtime.storage().get(storage_base_ + 3, minimum);
+  if(minimum < 256){
+    Qukeys::minimum_hold_time_ = minimum;
+  }else{
+    Runtime.storage().update(storage_base_ + 3, Qukeys::minimum_hold_time_);
+  }
+
+  Runtime.storage().get(storage_base_ + 4, prior);
+  if(prior < 256){
+    Qukeys::minimum_prior_interval_ = prior;
+  }else{
+    Runtime.storage().update(storage_base_ + 4, Qukeys::minimum_prior_interval_);
   }
 
     return EventHandlerResult::OK;
