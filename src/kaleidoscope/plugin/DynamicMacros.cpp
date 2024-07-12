@@ -89,11 +89,11 @@ namespace kaleidoscope
       }
     }
 
-    void customDelay(uint16_t randomA, uint16_t randomB)
+    void randomDelay(uint16_t randomA, uint16_t randomB)
     {
-      uint16_t random = random(randomA, randomB);
-      int c = (int)random / 1000;
-      int d = random % 1000;
+      int rnd = random(randomA, randomB);
+      int c = (int)rnd / 1000;
+      int d = rnd % 1000;
       while (c >= 0)
       {
         if (c == 0)
@@ -317,7 +317,7 @@ namespace kaleidoscope
 
     EventHandlerResult DynamicMacros::onFocusEvent(const char *command)
     {
-      if (::Focus.handleHelp(command, PSTR("macros.map\nmacros.trigger")))
+      if (::Focus.handleHelp(command, PSTR("macros.map\nmacros.trigger\nmacros.memory")))
         return EventHandlerResult::OK;
 
       if (strncmp_P(command, PSTR("macros."), 7) != 0)
@@ -355,6 +355,14 @@ namespace kaleidoscope
         uint8_t id = 0;
         ::Focus.read(id);
         play(id);
+      }
+
+      if (strcmp_P(command + 7, PSTR("memory")) == 0)
+      {
+        if (::Focus.isEOL())
+        {
+          ::Focus.send(storage_size_);
+        }
       }
 
       return EventHandlerResult::EVENT_CONSUMED;
