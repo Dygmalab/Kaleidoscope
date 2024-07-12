@@ -23,16 +23,21 @@
 #include <Arduino.h>
 #include "TWI.h"
 
-struct cRGB {
+struct cRGB
+{
   uint8_t r;
   uint8_t g;
   uint8_t b;
 };
 
-namespace kaleidoscope {
-namespace device {
-namespace dygma {
-namespace raise {
+namespace kaleidoscope
+{
+  namespace device
+  {
+    namespace dygma
+    {
+      namespace raise
+      {
 
 #define LED_BANKS 9
 
@@ -43,72 +48,88 @@ namespace raise {
 
 #define LED_RED_CHANNEL_MAX 229
 
-typedef union {
-  cRGB leds[LEDS_PER_HAND];
-  byte bytes[LED_BANKS][LED_BYTES_PER_BANK];
-} LEDData_t;
+        typedef union
+        {
+          cRGB leds[LEDS_PER_HAND];
+          byte bytes[LED_BANKS][LED_BYTES_PER_BANK];
+        } LEDData_t;
 
 // return what bank the led is in
 #define LED_TO_BANK(led) (led / LEDS_PER_BANK)
 
-typedef union {
-  uint8_t rows[5];
-  uint64_t all;
-} keydata_t;
+        typedef union
+        {
+          uint8_t rows[5];
+          uint64_t all;
+        } keydata_t;
 
-class Hand {
- public:
-  explicit Hand(byte ad01) : ad01_(ad01), twi_(i2c_addr_base_ | ad01) {}
+        class Hand
+        {
+        public:
+          explicit Hand(byte ad01) : ad01_(ad01), twi_(i2c_addr_base_ | ad01) {}
 
-  int readVersion();
-  int readSLEDVersion();
-  int readSLEDCurrent();
-  byte setSLEDCurrent(byte current);
-  int readJoint();
-  int readLayout();
+          int readVersion();
+          int readSLEDVersion();
+          int readSLEDCurrent();
+          byte setSLEDCurrent(byte current);
+          int readJoint();
+          int readLayout();
 
-  byte setKeyscanInterval(byte delay);
-  int readKeyscanInterval();
+          byte setKeyscanInterval(byte delay);
+          int readKeyscanInterval();
 
-  byte setLEDSPIFrequency(byte frequency);
-  int readLEDSPIFrequency();
+          byte setLEDSPIFrequency(byte frequency);
+          int readLEDSPIFrequency();
 
-  bool moreKeysWaiting();
-  void sendLEDData();
-  void sendLEDBank(uint8_t bank);
-  keydata_t getKeyData();
-  bool readKeys();
-  uint8_t controllerAddress();
-  uint8_t crc_errors() {
-    return twi_.crc_errors();
+          bool moreKeysWaiting();
+          void sendLEDData();
+          void sendLEDBank(uint8_t bank);
+          keydata_t getKeyData();
+          bool readKeys();
+          uint8_t controllerAddress();
+          uint8_t crc_errors()
+          {
+            return twi_.crc_errors();
+          }
+
+          void setBrightness(uint8_t brightness)
+          {
+            brightness_adjustment_ = 255 - brightness;
+          }
+          uint8_t getBrightness()
+          {
+            return 255 - brightness_adjustment_;
+          }
+
+          void setBrightnessUG(uint8_t brightness)
+          {
+            brightness_adjustment_ug_ = 255 - brightness;
+          }
+          uint8_t getBrightnessUG()
+          {
+            return 255 - brightness_adjustment_ug_;
+          }
+
+          LEDData_t led_data;
+          bool online = false;
+
+        private:
+          uint8_t brightness_adjustment_ = 0;
+          uint8_t brightness_adjustment_ug_ = 0;
+          int ad01_;
+          TWI twi_;
+          keydata_t key_data_;
+          uint8_t next_led_bank_ = 0;
+          uint8_t red_max_fraction_ = (LED_RED_CHANNEL_MAX * 100) / 255;
+
+          static constexpr uint8_t i2c_addr_base_ = 0x58;
+
+          int readRegister(uint8_t cmd);
+        };
+
+      }
+    }
   }
-
-  void setBrightness(uint8_t brightness) {
-    brightness_adjustment_ = 255 - brightness;
-  }
-  uint8_t getBrightness() {
-    return 255 - brightness_adjustment_;
-  }
-
-  LEDData_t led_data;
-  bool online = false;
-
- private:
-  uint8_t brightness_adjustment_ = 0;
-  int ad01_;
-  TWI twi_;
-  keydata_t key_data_;
-  uint8_t next_led_bank_ = 0;
-  uint8_t red_max_fraction_ = (LED_RED_CHANNEL_MAX * 100) / 255;
-
-  static constexpr uint8_t i2c_addr_base_ = 0x58;
-
-  int readRegister(uint8_t cmd);
-};
-
-}
-}
-}
 }
 
 #endif

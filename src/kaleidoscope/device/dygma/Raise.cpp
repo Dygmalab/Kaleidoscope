@@ -29,542 +29,687 @@
 #include "kaleidoscope/driver/keyscanner/Base_Impl.h"
 
 #define I2C_CLOCK_KHZ 200
-#define I2C_FLASH_CLOCK_KHZ 100  // flashing doesn't work reliably at higher clock speeds
+#define I2C_FLASH_CLOCK_KHZ 100 // flashing doesn't work reliably at higher clock speeds
 
-#define SIDE_POWER 1  // side power switch pa10
+#define SIDE_POWER 1 // side power switch pa10
 
 #define LAYOUT_ISO 0
 #define LAYOUT_ANSI 1
 
-namespace kaleidoscope {
-namespace device {
-namespace dygma {
+namespace kaleidoscope
+{
+  namespace device
+  {
+    namespace dygma
+    {
 
-/********* RaiseHands *********/
+      /********* RaiseHands *********/
 
-struct RaiseHands {
-  static raise::Hand leftHand;
-  static raise::Hand rightHand;
+      struct RaiseHands
+      {
+        static raise::Hand leftHand;
+        static raise::Hand rightHand;
 
-  static void setup();
-  static void initializeSides();
+        static void setup();
+        static void initializeSides();
 
-  static uint8_t layout;
+        static uint8_t layout;
 
-  static void setSidePower(bool power);
-  static bool getSidePower() { return side_power_; }
+        static void setSidePower(bool power);
+        static bool getSidePower() { return side_power_; }
 
-  static void keyscanInterval(uint16_t interval);
-  static uint16_t keyscanInterval() { return keyscan_interval_; }
+        static void keyscanInterval(uint16_t interval);
+        static uint16_t keyscanInterval() { return keyscan_interval_; }
 
-  static String getChipID();
+        static String getChipID();
 
-  static void ledBrightnessCorrection(uint8_t brightness);
-  static uint8_t ledBrightnessCorrection() {
-    return led_brightness_correction_;
-  }
+        static void ledBrightnessCorrection(uint8_t brightness);
+        static uint8_t ledBrightnessCorrection()
+        {
+          return led_brightness_correction_;
+        }
 
- private:
-  static uint16_t keyscan_interval_;
-  static uint8_t led_brightness_correction_;
-  static bool side_power_;
-  static uint16_t settings_base_;
-  static uint16_t settings_brightness_;
-  static constexpr uint8_t iso_only_led_ = 19;
-};
+        static void ledBrightnessCorrectionUG(uint8_t brightness);
+        static uint8_t ledBrightnessCorrectionUG()
+        {
+          return led_brightness_correction_ug_;
+        }
 
-raise::Hand RaiseHands::leftHand(0);
-raise::Hand RaiseHands::rightHand(1);
-uint8_t RaiseHands::layout;
-bool RaiseHands::side_power_;
-uint16_t RaiseHands::settings_base_;
-uint16_t RaiseHands::settings_brightness_;
-uint8_t RaiseHands::led_brightness_correction_ = 255;
-uint16_t RaiseHands::keyscan_interval_ = 50;
+      private:
+        static uint16_t keyscan_interval_;
+        static uint8_t led_brightness_correction_;
+        static uint8_t led_brightness_correction_ug_;
+        static bool side_power_;
+        static uint16_t settings_base_;
+        static uint16_t settings_brightness_;
+        static uint16_t settings_brightness_ug_;
+        static constexpr uint8_t iso_only_led_ = 19;
+      };
 
-void RaiseHands::setSidePower(bool power) {
-  digitalWrite(SIDE_POWER, power ? HIGH : LOW);
-  side_power_ = power;
-}
+      raise::Hand RaiseHands::leftHand(0);
+      raise::Hand RaiseHands::rightHand(1);
+      uint8_t RaiseHands::layout;
+      bool RaiseHands::side_power_;
+      uint16_t RaiseHands::settings_base_;
+      uint16_t RaiseHands::settings_brightness_;
+      uint16_t RaiseHands::settings_brightness_ug_;
+      uint8_t RaiseHands::led_brightness_correction_ = 255;
+      uint8_t RaiseHands::led_brightness_correction_ug_ = 255;
+      uint16_t RaiseHands::keyscan_interval_ = 50;
 
-void RaiseHands::setup() {
-  settings_base_ = ::EEPROMSettings.requestSlice(sizeof(keyscan_interval_));
-  settings_brightness_ =
-      ::EEPROMSettings.requestSlice(sizeof(led_brightness_correction_));
-
-  // If keyscan is max, assume that EEPROM is uninitialized, and store the
-  // defaults.
-  uint16_t interval;
-  Runtime.storage().get(settings_base_, interval);
-  if (interval == 0xffff) {
-    Runtime.storage().put(settings_base_, keyscan_interval_);
-    Runtime.storage().commit();
-  }
-  Runtime.storage().get(settings_base_, keyscan_interval_);
-
-  uint8_t brightness;
-  Runtime.storage().get(settings_brightness_, brightness);
-  if (brightness == 0xff) {
-    Runtime.storage().put(settings_brightness_, led_brightness_correction_);
-    Runtime.storage().commit();
-  }
-  Runtime.storage().get(settings_brightness_, led_brightness_correction_);
-}
-
-void RaiseHands::keyscanInterval(uint16_t interval) {
-  leftHand.setKeyscanInterval(interval);
-  rightHand.setKeyscanInterval(interval);
-  keyscan_interval_ = interval;
-  Runtime.storage().put(settings_base_, keyscan_interval_);
-  Runtime.storage().commit();
-}
-
-void RaiseHands::ledBrightnessCorrection(uint8_t brightness) {
-  leftHand.setBrightness(brightness);
-  rightHand.setBrightness(brightness);
-  led_brightness_correction_ = brightness;
-  Runtime.storage().put(settings_brightness_, led_brightness_correction_);
-  Runtime.storage().commit();
-}
-
-String RaiseHands::getChipID() {
-  uint32_t pdwUniqueID[4];
-  pdwUniqueID[0] = *(volatile uint32_t*)(0x0080A00C);
-  pdwUniqueID[1] = *(volatile uint32_t*)(0x0080A040);
-  pdwUniqueID[2] = *(volatile uint32_t*)(0x0080A044);
-  pdwUniqueID[3] = *(volatile uint32_t*)(0x0080A048);
-  char buf[33];
-  snprintf(buf, sizeof(buf), "%8x%8x%8x%8x",
-  pdwUniqueID[0], pdwUniqueID[1], pdwUniqueID[2], pdwUniqueID[3]);
-  return String(buf);
-}
-
-void RaiseHands::initializeSides() {
-  // key scan interval from eeprom
-  leftHand.setKeyscanInterval(keyscan_interval_);
-  rightHand.setKeyscanInterval(keyscan_interval_);
-
-  // led brightness from eeprom
-  leftHand.setBrightness(led_brightness_correction_);
-  rightHand.setBrightness(led_brightness_correction_);
-
-  // get ANSI/ISO at every side replug
-  uint8_t l_layout = leftHand.readLayout();
-  uint8_t r_layout = rightHand.readLayout();
-
-  // setup layout variable, this will affect led mapping - defaults to ISO if
-  // nothing reported
-  // FIXME
-  if (l_layout == 1 || r_layout == 1)
-    layout = 1;
-  else
-    layout = 0;
-
-  /*
-   * if the neuron starts up with no sides connected, it will assume ISO. This
-   * turns on an extra LED (hardware LED 19 on left side). If an ANSI left is
-   * then plugged in, the keyboard will switch to ANSI, but LED 19 can't get
-   * wiped because the ANSI LED map doesn't include this LED. It will be driven
-   * from the SLED1735's memory with the same colour as before, which causes
-   * weird looking colours to come on on other seemingly unrelated keys. So: on
-   * a replug, set LED 19 to off to be safe.
-   */
-  leftHand.led_data.leds[iso_only_led_] = {0, 0, 0};
-
-  // get activated LED plugin to refresh
-  ::LEDControl.refreshAll();
-}
-
-/********* LED Driver *********/
-
-bool RaiseLEDDriver::isLEDChangedNeuron;
-uint8_t RaiseLEDDriver::isLEDChangedLeft[LED_BANKS];
-uint8_t RaiseLEDDriver::isLEDChangedRight[LED_BANKS];
-cRGB RaiseLEDDriver::neuronLED;
-constexpr uint8_t RaiseLEDDriver::led_map[][RaiseLEDDriverProps::led_count + 1];
-
-constexpr uint8_t RaiseLEDDriverProps::key_led_map[];
-
-void RaiseLEDDriver::setBrightness(uint8_t brightness) {
-  RaiseHands::ledBrightnessCorrection(brightness);
-  for (uint8_t i = 0; i < LED_BANKS; i++) {
-    isLEDChangedLeft[i] = true;
-    isLEDChangedRight[i] = true;
-  }
-}
-
-uint8_t RaiseLEDDriver::getBrightness() {
-  return RaiseHands::ledBrightnessCorrection();
-}
-
-void RaiseLEDDriver::syncLeds() {
-  // left and right sides
-  for (uint8_t i = 0; i < LED_BANKS; i++) {
-    // only send the banks that have changed - try to improve jitter performance
-    if (isLEDChangedLeft[i]) {
-      RaiseHands::leftHand.sendLEDBank(i);
-      isLEDChangedLeft[i] = false;
-    }
-    if (isLEDChangedRight[i]) {
-      RaiseHands::rightHand.sendLEDBank(i);
-      isLEDChangedRight[i] = false;
-    }
-  }
-
-  if (isLEDChangedNeuron) {
-    updateNeuronLED();
-    isLEDChangedNeuron = false;
-  }
-}
-
-void RaiseLEDDriver::updateNeuronLED() {
-  static constexpr struct {
-    uint8_t r, g, b;
-  } pins = { 3, 5, 4 };
-  auto constexpr gamma8 = kaleidoscope::driver::color::gamma_correction;
-
-  // invert as these are common anode, and make sure we reach 65535 to be able
-  // to turn fully off.
-  analogWrite(pins.r, ((256 - pgm_read_byte(&gamma8[neuronLED.r])) << 8) - 1);
-  analogWrite(pins.g, ((256 - pgm_read_byte(&gamma8[neuronLED.g])) << 8) - 1);
-  analogWrite(pins.b, ((256 - pgm_read_byte(&gamma8[neuronLED.b])) << 8) - 1);
-}
-
-void RaiseLEDDriver::setCrgbAt(uint8_t i, cRGB crgb) {
-  // prevent reading off the end of the led_map array
-  if (i >= RaiseLEDDriverProps::led_count) return;
-
-  // neuron LED
-  if (i == RaiseLEDDriverProps::led_count - 1) {
-    isLEDChangedNeuron |= !(neuronLED.r == crgb.r && neuronLED.g == crgb.g &&
-                            neuronLED.b == crgb.b);
-    neuronLED = crgb;
-    return;
-  }
-
-  // get the SLED index
-  uint8_t sled_num = led_map[RaiseHands::layout][i];
-  if (sled_num < LEDS_PER_HAND) {
-    cRGB oldColor = RaiseHands::leftHand.led_data.leds[sled_num];
-    RaiseHands::leftHand.led_data.leds[sled_num] = crgb;
-    isLEDChangedLeft[uint8_t(sled_num / 8)] |=
-        !(oldColor.r == crgb.r && oldColor.g == crgb.g && oldColor.b == crgb.b);
-  } else if (sled_num < 2 * LEDS_PER_HAND) {
-    cRGB oldColor =
-        RaiseHands::rightHand.led_data.leds[sled_num - LEDS_PER_HAND];
-    RaiseHands::rightHand.led_data.leds[sled_num - LEDS_PER_HAND] = crgb;
-    isLEDChangedRight[uint8_t((sled_num - LEDS_PER_HAND) / 8)] |=
-        !(oldColor.r == crgb.r && oldColor.g == crgb.g && oldColor.b == crgb.b);
-  } else {
-    // TODO(anyone):
-    // how do we want to handle debugging assertions about crazy user
-    // code that would overwrite other memory?
-  }
-}
-
-cRGB RaiseLEDDriver::getCrgbAt(uint8_t i) {
-  if (i >= RaiseLEDDriverProps::led_count) return {0, 0, 0};
-
-  uint8_t sled_num = led_map[RaiseHands::layout][i];
-  if (sled_num < LEDS_PER_HAND) {
-    return RaiseHands::leftHand.led_data.leds[sled_num];
-  } else if (sled_num < 2 * LEDS_PER_HAND) {
-    return RaiseHands::rightHand.led_data.leds[sled_num - LEDS_PER_HAND];
-  } else {
-    return {0, 0, 0};
-  }
-}
-
-void RaiseLEDDriver::setup() {
-  pinMode(SIDE_POWER, OUTPUT);
-  RaiseHands::setSidePower(false);
-
-  // arduino zero analogWrite(255) isn't fully on as its actually working with a
-  // 16bit counter and the mapping is a bit shift.
-  // so change to 16 bit resolution to avoid the mapping and do the mapping
-  // ourselves in updateHubleLED() to ensure LEDs can be set fully off
-  analogWriteResolution(16);
-  updateNeuronLED();
-
-  delay(10);
-  RaiseHands::setSidePower(true);
-  delay(500);  // wait for sides to power up and finish bootloader
-}
-
-/********* Key scanner *********/
-
-raise::keydata_t RaiseKeyScanner::leftHandState;
-raise::keydata_t RaiseKeyScanner::rightHandState;
-raise::keydata_t RaiseKeyScanner::previousLeftHandState;
-raise::keydata_t RaiseKeyScanner::previousRightHandState;
-raise::keydata_t RaiseKeyScanner::leftHandMask;
-raise::keydata_t RaiseKeyScanner::rightHandMask;
-bool RaiseKeyScanner::lastLeftOnline;
-bool RaiseKeyScanner::lastRightOnline;
-
-void RaiseKeyScanner::readMatrix() {
-  previousLeftHandState = leftHandState;
-  previousRightHandState = rightHandState;
-
-  if (RaiseHands::leftHand.readKeys()) {
-    leftHandState = RaiseHands::leftHand.getKeyData();
-    // if ANSI, then swap r3c0 and r3c1 to match the PCB
-    if (RaiseHands::layout == LAYOUT_ANSI) {
-      // only swap if bits are different
-      if ((leftHandState.rows[3] & (1 << 0)) ^
-          leftHandState.rows[3] & (1 << 1)) {
-        leftHandState.rows[3] ^= (1 << 0);  // flip the bit
-        leftHandState.rows[3] ^= (1 << 1);  // flip the bit
+      void RaiseHands::setSidePower(bool power)
+      {
+        digitalWrite(SIDE_POWER, power ? HIGH : LOW);
+        side_power_ = power;
       }
-    }
-  }
 
-  if (RaiseHands::rightHand.readKeys()) {
-    rightHandState = RaiseHands::rightHand.getKeyData();
-    // if ANSI, then swap r1c0 and r2c0 to match the PCB
-    if (RaiseHands::layout == LAYOUT_ANSI) {
-      if ((rightHandState.rows[1] & (1 << 0)) ^
-          rightHandState.rows[2] & (1 << 0)) {
-        rightHandState.rows[1] ^= (1 << 0);
-        rightHandState.rows[2] ^= (1 << 0);
+      void RaiseHands::setup()
+      {
+        settings_base_ = ::EEPROMSettings.requestSlice(sizeof(keyscan_interval_));
+        settings_brightness_ =
+            ::EEPROMSettings.requestSlice(sizeof(led_brightness_correction_));
+        settings_brightness_ug_ =
+            ::EEPROMSettings.requestSlice(sizeof(led_brightness_correction_ug_));
+        // If keyscan is max, assume that EEPROM is uninitialized, and store the
+        // defaults.
+        uint16_t interval;
+        Runtime.storage().get(settings_base_, interval);
+        if (interval == 0xffff)
+        {
+          Runtime.storage().put(settings_base_, keyscan_interval_);
+          Runtime.storage().commit();
+        }
+        Runtime.storage().get(settings_base_, keyscan_interval_);
+
+        uint8_t brightness;
+        Runtime.storage().get(settings_brightness_, brightness);
+        if (brightness == 0xff)
+        {
+          Runtime.storage().put(settings_brightness_, led_brightness_correction_);
+          Runtime.storage().commit();
+        }
+        Runtime.storage().get(settings_brightness_, led_brightness_correction_);
+
+        uint8_t brightness_ug;
+        Runtime.storage().get(settings_brightness_ug_, brightness_ug);
+        if (brightness_ug == 0xff)
+        {
+          Runtime.storage().put(settings_brightness_ug_, led_brightness_correction_ug_);
+          Runtime.storage().commit();
+        }
+        Runtime.storage().get(settings_brightness_ug_, led_brightness_correction_ug_);
       }
-    }
-  }
 
-  // if a side has just been replugged, initialise it
-  if ((RaiseHands::leftHand.online && !lastLeftOnline) ||
-      (RaiseHands::rightHand.online && !lastRightOnline))
-    RaiseHands::initializeSides();
+      void RaiseHands::keyscanInterval(uint16_t interval)
+      {
+        leftHand.setKeyscanInterval(interval);
+        rightHand.setKeyscanInterval(interval);
+        keyscan_interval_ = interval;
+        Runtime.storage().put(settings_base_, keyscan_interval_);
+        Runtime.storage().commit();
+      }
 
-  // if a side has just been unplugged, wipe its state
-  if (!RaiseHands::leftHand.online && lastLeftOnline) leftHandState.all = 0;
+      void RaiseHands::ledBrightnessCorrection(uint8_t brightness)
+      {
+        leftHand.setBrightness(brightness);
+        rightHand.setBrightness(brightness);
+        led_brightness_correction_ = brightness;
+        Runtime.storage().put(settings_brightness_, led_brightness_correction_);
+        Runtime.storage().commit();
+      }
 
-  if (!RaiseHands::rightHand.online && lastRightOnline) rightHandState.all = 0;
+      void RaiseHands::ledBrightnessCorrectionUG(uint8_t brightness)
+      {
+        leftHand.setBrightnessUG(brightness);
+        rightHand.setBrightnessUG(brightness);
+        led_brightness_correction_ug_ = brightness;
+        Runtime.storage().put(settings_brightness_ug_, led_brightness_correction_ug_);
+        Runtime.storage().commit();
+      }
 
-  // store previous state of whether the sides are plugged in
-  lastLeftOnline = RaiseHands::leftHand.online;
-  lastRightOnline = RaiseHands::rightHand.online;
-}
+      String RaiseHands::getChipID()
+      {
+        uint32_t pdwUniqueID[4];
+        pdwUniqueID[0] = *(volatile uint32_t *)(0x0080A00C);
+        pdwUniqueID[1] = *(volatile uint32_t *)(0x0080A040);
+        pdwUniqueID[2] = *(volatile uint32_t *)(0x0080A044);
+        pdwUniqueID[3] = *(volatile uint32_t *)(0x0080A048);
+        char buf[33];
+        snprintf(buf, sizeof(buf), "%8x%8x%8x%8x",
+                 pdwUniqueID[0], pdwUniqueID[1], pdwUniqueID[2], pdwUniqueID[3]);
+        return String(buf);
+      }
 
-void RaiseKeyScanner::actOnMatrixScan() {
-  for (byte row = 0; row < Props_::matrix_rows; row++) {
-    for (byte col = 0; col < Props_::left_columns; col++) {
-      uint8_t keynum = (row * Props_::left_columns) + col;
-      uint8_t keyState;
+      void RaiseHands::initializeSides()
+      {
+        // key scan interval from eeprom
+        leftHand.setKeyscanInterval(keyscan_interval_);
+        rightHand.setKeyscanInterval(keyscan_interval_);
 
-      // left
-      keyState = (bitRead(previousLeftHandState.all, keynum) << 0) |
-                 (bitRead(leftHandState.all, keynum) << 1);
-      if (keyState)
-        ThisType::handleKeyswitchEvent(Key_NoKey, KeyAddr(row, col), keyState);
+        // led brightness from eeprom
+        leftHand.setBrightness(led_brightness_correction_);
+        rightHand.setBrightness(led_brightness_correction_);
 
-      // right
-      keyState = (bitRead(previousRightHandState.all, keynum) << 0) |
-                 (bitRead(rightHandState.all, keynum) << 1);
-      if (keyState)
-        ThisType::handleKeyswitchEvent(
-            Key_NoKey, KeyAddr(row, (Props_::matrix_columns - 1) - col),
-            keyState);
-    }
-  }
-}
+        // led UG brightness from eeprom
+        leftHand.setBrightnessUG(led_brightness_correction_ug_);
+        rightHand.setBrightnessUG(led_brightness_correction_ug_);
 
-void RaiseKeyScanner::scanMatrix() {
-  readMatrix();
-  actOnMatrixScan();
-}
+        // get ANSI/ISO at every side replug
+        uint8_t l_layout = leftHand.readLayout();
+        uint8_t r_layout = rightHand.readLayout();
 
-void RaiseKeyScanner::maskKey(KeyAddr key_addr) {
-  if (!key_addr.isValid()) return;
+        // setup layout variable, this will affect led mapping - defaults to ISO if
+        // nothing reported
+        // FIXME
+        if (l_layout == 1 || r_layout == 1)
+          layout = 1;
+        else
+          layout = 0;
 
-  auto row = key_addr.row();
-  auto col = key_addr.col();
+        /*
+         * if the neuron starts up with no sides connected, it will assume ISO. This
+         * turns on an extra LED (hardware LED 19 on left side). If an ANSI left is
+         * then plugged in, the keyboard will switch to ANSI, but LED 19 can't get
+         * wiped because the ANSI LED map doesn't include this LED. It will be driven
+         * from the SLED1735's memory with the same colour as before, which causes
+         * weird looking colours to come on on other seemingly unrelated keys. So: on
+         * a replug, set LED 19 to off to be safe.
+         */
+        leftHand.led_data.leds[iso_only_led_] = {0, 0, 0};
 
-  if (col >= Props_::left_columns) {
-    rightHandMask.rows[row] |=
-        1 << (Props_::right_columns - (col - Props_::left_columns));
-  } else {
-    leftHandMask.rows[row] |= 1 << (Props_::right_columns - col);
-  }
-}
+        // get activated LED plugin to refresh
+        ::LEDControl.refreshAll();
+      }
 
-void RaiseKeyScanner::unMaskKey(KeyAddr key_addr) {
-  if (!key_addr.isValid()) return;
+      /********* LED Driver *********/
 
-  auto row = key_addr.row();
-  auto col = key_addr.col();
+      bool RaiseLEDDriver::isLEDChangedNeuron;
+      uint8_t RaiseLEDDriver::isLEDChangedLeft[LED_BANKS];
+      uint8_t RaiseLEDDriver::isLEDChangedRight[LED_BANKS];
+      cRGB RaiseLEDDriver::neuronLED;
+      constexpr uint8_t RaiseLEDDriver::led_map[][RaiseLEDDriverProps::led_count + 1];
 
-  if (col >= Props_::left_columns) {
-    rightHandMask.rows[row] &=
-        ~(1 << (Props_::right_columns - (col - Props_::left_columns)));
-  } else {
-    leftHandMask.rows[row] &= ~(1 << (Props_::right_columns - col));
-  }
-}
+      constexpr uint8_t RaiseLEDDriverProps::key_led_map[];
 
-bool RaiseKeyScanner::isKeyMasked(KeyAddr key_addr) {
-  if (!key_addr.isValid()) return false;
+      void RaiseLEDDriver::setBrightness(uint8_t brightness)
+      {
+        RaiseHands::ledBrightnessCorrection(brightness);
+        for (uint8_t i = 0; i < LED_BANKS; i++)
+        {
+          isLEDChangedLeft[i] = true;
+          isLEDChangedRight[i] = true;
+        }
+      }
 
-  auto row = key_addr.row();
-  auto col = key_addr.col();
+      void RaiseLEDDriver::setBrightnessUG(uint8_t brightness)
+      {
+        RaiseHands::ledBrightnessCorrectionUG(brightness);
+        for (uint8_t i = 0; i < LED_BANKS; i++)
+        {
+          isLEDChangedLeft[i] = true;
+          isLEDChangedRight[i] = true;
+        }
+      }
 
-  if (col >= 8) {
-    return rightHandMask.rows[row] & (1 << (7 - (col - 8)));
-  } else {
-    return leftHandMask.rows[row] & (1 << (7 - col));
-  }
-}
+      uint8_t RaiseLEDDriver::getBrightness()
+      {
+        return RaiseHands::ledBrightnessCorrection();
+      }
 
-void RaiseKeyScanner::maskHeldKeys() {
-  memcpy(leftHandMask.rows, leftHandState.rows, sizeof(leftHandMask));
-  memcpy(rightHandMask.rows, rightHandState.rows, sizeof(rightHandMask));
-}
+      uint8_t RaiseLEDDriver::getBrightnessUG()
+      {
+        return RaiseHands::ledBrightnessCorrectionUG();
+      }
 
-bool RaiseKeyScanner::isKeyswitchPressed(KeyAddr key_addr) {
-  auto row = key_addr.row();
-  auto col = key_addr.col();
+      void RaiseLEDDriver::syncLeds()
+      {
+        // left and right sides
+        for (uint8_t i = 0; i < LED_BANKS; i++)
+        {
+          // only send the banks that have changed - try to improve jitter performance
+          if (isLEDChangedLeft[i])
+          {
+            RaiseHands::leftHand.sendLEDBank(i);
+            isLEDChangedLeft[i] = false;
+          }
+          if (isLEDChangedRight[i])
+          {
+            RaiseHands::rightHand.sendLEDBank(i);
+            isLEDChangedRight[i] = false;
+          }
+        }
 
-  if (col >= Props_::left_columns) {
-    return (bitRead(rightHandState.rows[row],
-                    (Props_::matrix_columns - 1) - col) != 0);
-  } else {
-    return (bitRead(leftHandState.rows[row], col) != 0);
-  }
-}
+        if (isLEDChangedNeuron)
+        {
+          updateNeuronLED();
+          isLEDChangedNeuron = false;
+        }
+      }
 
-bool RaiseKeyScanner::wasKeyswitchPressed(KeyAddr key_addr) {
-  auto row = key_addr.row();
-  auto col = key_addr.col();
+      void RaiseLEDDriver::updateNeuronLED()
+      {
+        static constexpr struct
+        {
+          uint8_t r, g, b;
+        } pins = {3, 5, 4};
+        auto constexpr gamma8 = kaleidoscope::driver::color::gamma_correction;
 
-  if (col >= Props_::left_columns) {
-    return (bitRead(previousRightHandState.rows[row],
-                    (Props_::matrix_columns - 1) - col) != 0);
-  } else {
-    return (bitRead(previousLeftHandState.rows[row], col) != 0);
-  }
-}
+        // invert as these are common anode, and make sure we reach 65535 to be able
+        // to turn fully off.
+        analogWrite(pins.r, ((256 - pgm_read_byte(&gamma8[neuronLED.r])) << 8) - 1);
+        analogWrite(pins.g, ((256 - pgm_read_byte(&gamma8[neuronLED.g])) << 8) - 1);
+        analogWrite(pins.b, ((256 - pgm_read_byte(&gamma8[neuronLED.b])) << 8) - 1);
+      }
 
-uint8_t RaiseKeyScanner::pressedKeyswitchCount() {
-  return __builtin_popcountll(leftHandState.all) +
-         __builtin_popcountll(rightHandState.all);
-}
+      void RaiseLEDDriver::setCrgbAt(uint8_t i, cRGB crgb)
+      {
+        // prevent reading off the end of the led_map array
+        if (i >= RaiseLEDDriverProps::led_count)
+          return;
 
-uint8_t RaiseKeyScanner::previousPressedKeyswitchCount() {
-  return __builtin_popcountll(previousLeftHandState.all) +
-         __builtin_popcountll(previousRightHandState.all);
-}
+        // neuron LED
+        if (i == RaiseLEDDriverProps::led_count - 1)
+        {
+          isLEDChangedNeuron |= !(neuronLED.r == crgb.r && neuronLED.g == crgb.g &&
+                                  neuronLED.b == crgb.b);
+          neuronLED = crgb;
+          return;
+        }
 
-void RaiseKeyScanner::setKeyscanInterval(uint8_t interval) {
-  RaiseHands::leftHand.setKeyscanInterval(interval);
-  RaiseHands::rightHand.setKeyscanInterval(interval);
-}
+        // get the SLED index
+        uint8_t sled_num = led_map[RaiseHands::layout][i];
+        if (sled_num < LEDS_PER_HAND)
+        {
+          cRGB oldColor = RaiseHands::leftHand.led_data.leds[sled_num];
+          RaiseHands::leftHand.led_data.leds[sled_num] = crgb;
+          isLEDChangedLeft[uint8_t(sled_num / 8)] |=
+              !(oldColor.r == crgb.r && oldColor.g == crgb.g && oldColor.b == crgb.b);
+        }
+        else if (sled_num < 2 * LEDS_PER_HAND)
+        {
+          cRGB oldColor =
+              RaiseHands::rightHand.led_data.leds[sled_num - LEDS_PER_HAND];
+          RaiseHands::rightHand.led_data.leds[sled_num - LEDS_PER_HAND] = crgb;
+          isLEDChangedRight[uint8_t((sled_num - LEDS_PER_HAND) / 8)] |=
+              !(oldColor.r == crgb.r && oldColor.g == crgb.g && oldColor.b == crgb.b);
+        }
+        else
+        {
+          // TODO(anyone):
+          // how do we want to handle debugging assertions about crazy user
+          // code that would overwrite other memory?
+        }
+      }
 
-void RaiseKeyScanner::setup() {
-  static constexpr uint8_t keyscanner_pins[] = {
-      2,  3,  4,  5,  6,  7,  8,  9,  10, 11, 12, 13, 14,
-      15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 30,
-      31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42};
-  for (int i = 0; i < sizeof(keyscanner_pins); i++) {
-    pinMode(keyscanner_pins[i], OUTPUT);
-    digitalWrite(keyscanner_pins[i], LOW);
-  }
-}
+      cRGB RaiseLEDDriver::getCrgbAt(uint8_t i)
+      {
+        if (i >= RaiseLEDDriverProps::led_count)
+          return {0, 0, 0};
 
-void RaiseKeyScanner::reset() {
-  leftHandState.all = 0;
-  rightHandState.all = 0;
-  Runtime.hid().keyboard().releaseAllKeys();
-  Runtime.hid().keyboard().sendReport();
-}
+        uint8_t sled_num = led_map[RaiseHands::layout][i];
+        if (sled_num < LEDS_PER_HAND)
+        {
+          return RaiseHands::leftHand.led_data.leds[sled_num];
+        }
+        else if (sled_num < 2 * LEDS_PER_HAND)
+        {
+          return RaiseHands::rightHand.led_data.leds[sled_num - LEDS_PER_HAND];
+        }
+        else
+        {
+          return {0, 0, 0};
+        }
+      }
 
-/********* Hardware plugin *********/
-void Raise::setup() {
-  RaiseHands::setup();
-  KeyScanner::setup();
-  LEDDriver::setup();
+      void RaiseLEDDriver::setup()
+      {
+        pinMode(SIDE_POWER, OUTPUT);
+        RaiseHands::setSidePower(false);
 
-  // initialise Wire of scanner - have to do this here to avoid problem with
-  // static object intialisation ordering
-  Wire.begin();
-  Wire.setClock(I2C_CLOCK_KHZ * 1000);
+        // arduino zero analogWrite(255) isn't fully on as its actually working with a
+        // 16bit counter and the mapping is a bit shift.
+        // so change to 16 bit resolution to avoid the mapping and do the mapping
+        // ourselves in updateHubleLED() to ensure LEDs can be set fully off
+        analogWriteResolution(16);
+        updateNeuronLED();
 
-  RaiseHands::initializeSides();
-}
+        delay(10);
+        RaiseHands::setSidePower(true);
+        delay(500); // wait for sides to power up and finish bootloader
+      }
 
-void Raise::side::prepareForFlash() {
-  Wire.end();
+      /********* Key scanner *********/
 
-  setPower(LOW);
-  // also turn off i2c pins to stop attiny from getting enough current through
-  // i2c to stay on
-  pinMode(SCL, OUTPUT);
-  pinMode(SDA, OUTPUT);
-  digitalWrite(SCL, false);
-  digitalWrite(SDA, false);
+      raise::keydata_t RaiseKeyScanner::leftHandState;
+      raise::keydata_t RaiseKeyScanner::rightHandState;
+      raise::keydata_t RaiseKeyScanner::previousLeftHandState;
+      raise::keydata_t RaiseKeyScanner::previousRightHandState;
+      raise::keydata_t RaiseKeyScanner::leftHandMask;
+      raise::keydata_t RaiseKeyScanner::rightHandMask;
+      bool RaiseKeyScanner::lastLeftOnline;
+      bool RaiseKeyScanner::lastRightOnline;
 
-  // wipe key states, to prevent accidental key repeats
-  RaiseKeyScanner::reset();
+      void RaiseKeyScanner::readMatrix()
+      {
+        previousLeftHandState = leftHandState;
+        previousRightHandState = rightHandState;
 
-  setPower(HIGH);
+        if (RaiseHands::leftHand.readKeys())
+        {
+          leftHandState = RaiseHands::leftHand.getKeyData();
+          // if ANSI, then swap r3c0 and r3c1 to match the PCB
+          if (RaiseHands::layout == LAYOUT_ANSI)
+          {
+            // only swap if bits are different
+            if ((leftHandState.rows[3] & (1 << 0)) ^
+                leftHandState.rows[3] & (1 << 1))
+            {
+              leftHandState.rows[3] ^= (1 << 0); // flip the bit
+              leftHandState.rows[3] ^= (1 << 1); // flip the bit
+            }
+          }
+        }
 
-  Wire.begin();
-  Wire.setClock(I2C_FLASH_CLOCK_KHZ * 1000);
-  // wait for side bootloader to be ready
-  delay(100);
-}
+        if (RaiseHands::rightHand.readKeys())
+        {
+          rightHandState = RaiseHands::rightHand.getKeyData();
+          // if ANSI, then swap r1c0 and r2c0 to match the PCB
+          if (RaiseHands::layout == LAYOUT_ANSI)
+          {
+            if ((rightHandState.rows[1] & (1 << 0)) ^
+                rightHandState.rows[2] & (1 << 0))
+            {
+              rightHandState.rows[1] ^= (1 << 0);
+              rightHandState.rows[2] ^= (1 << 0);
+            }
+          }
+        }
 
-uint8_t Raise::side::getPower() { return RaiseHands::getSidePower(); }
-void Raise::side::setPower(uint8_t power) { RaiseHands::setSidePower(power); }
+        // if a side has just been replugged, initialise it
+        if ((RaiseHands::leftHand.online && !lastLeftOnline) ||
+            (RaiseHands::rightHand.online && !lastRightOnline))
+          RaiseHands::initializeSides();
 
-uint8_t Raise::side::leftVersion() {
-  return RaiseHands::leftHand.readVersion();
-}
-uint8_t Raise::side::rightVersion() {
-  return RaiseHands::rightHand.readVersion();
-}
+        // if a side has just been unplugged, wipe its state
+        if (!RaiseHands::leftHand.online && lastLeftOnline)
+          leftHandState.all = 0;
 
-uint8_t Raise::side::leftCRCErrors() {
-  return RaiseHands::leftHand.crc_errors();
-}
-uint8_t Raise::side::rightCRCErrors() {
-  return RaiseHands::rightHand.crc_errors();
-}
+        if (!RaiseHands::rightHand.online && lastRightOnline)
+          rightHandState.all = 0;
 
-uint8_t Raise::side::leftSLEDVersion() {
-  return RaiseHands::leftHand.readSLEDVersion();
-}
-uint8_t Raise::side::rightSLEDVersion() {
-  return RaiseHands::rightHand.readSLEDVersion();
-}
+        // store previous state of whether the sides are plugged in
+        lastLeftOnline = RaiseHands::leftHand.online;
+        lastRightOnline = RaiseHands::rightHand.online;
+      }
 
-uint8_t Raise::side::leftSLEDCurrent() {
-  return RaiseHands::leftHand.readSLEDCurrent();
-}
-uint8_t Raise::side::rightSLEDCurrent() {
-  return RaiseHands::rightHand.readSLEDCurrent();
-}
-void Raise::side::setSLEDCurrent(uint8_t current) {
-  RaiseHands::rightHand.setSLEDCurrent(current);
-  RaiseHands::leftHand.setSLEDCurrent(current);
-}
+      void RaiseKeyScanner::actOnMatrixScan()
+      {
+        for (byte row = 0; row < Props_::matrix_rows; row++)
+        {
+          for (byte col = 0; col < Props_::left_columns; col++)
+          {
+            uint8_t keynum = (row * Props_::left_columns) + col;
+            uint8_t keyState;
 
-Raise::settings::Layout Raise::settings::layout() {
-  return RaiseHands::layout == LAYOUT_ANSI ? Layout::ANSI : Layout::ISO;
-}
-uint8_t Raise::settings::joint() { return RaiseHands::rightHand.readJoint(); }
+            // left
+            keyState = (bitRead(previousLeftHandState.all, keynum) << 0) |
+                       (bitRead(leftHandState.all, keynum) << 1);
+            if (keyState)
+              ThisType::handleKeyswitchEvent(Key_NoKey, KeyAddr(row, col), keyState);
 
-uint16_t Raise::settings::keyscanInterval() {
-  return RaiseHands::keyscanInterval();
-}
-String Raise::settings::getChipID() {
-  return RaiseHands::getChipID();
-}
-void Raise::settings::keyscanInterval(uint16_t interval) {
-  RaiseHands::keyscanInterval(interval);
-}
+            // right
+            keyState = (bitRead(previousRightHandState.all, keynum) << 0) |
+                       (bitRead(rightHandState.all, keynum) << 1);
+            if (keyState)
+              ThisType::handleKeyswitchEvent(
+                  Key_NoKey, KeyAddr(row, (Props_::matrix_columns - 1) - col),
+                  keyState);
+          }
+        }
+      }
 
-}  // namespace dygma
-}  // namespace device
-}  // namespace kaleidoscope
+      void RaiseKeyScanner::scanMatrix()
+      {
+        readMatrix();
+        actOnMatrixScan();
+      }
+
+      void RaiseKeyScanner::maskKey(KeyAddr key_addr)
+      {
+        if (!key_addr.isValid())
+          return;
+
+        auto row = key_addr.row();
+        auto col = key_addr.col();
+
+        if (col >= Props_::left_columns)
+        {
+          rightHandMask.rows[row] |=
+              1 << (Props_::right_columns - (col - Props_::left_columns));
+        }
+        else
+        {
+          leftHandMask.rows[row] |= 1 << (Props_::right_columns - col);
+        }
+      }
+
+      void RaiseKeyScanner::unMaskKey(KeyAddr key_addr)
+      {
+        if (!key_addr.isValid())
+          return;
+
+        auto row = key_addr.row();
+        auto col = key_addr.col();
+
+        if (col >= Props_::left_columns)
+        {
+          rightHandMask.rows[row] &=
+              ~(1 << (Props_::right_columns - (col - Props_::left_columns)));
+        }
+        else
+        {
+          leftHandMask.rows[row] &= ~(1 << (Props_::right_columns - col));
+        }
+      }
+
+      bool RaiseKeyScanner::isKeyMasked(KeyAddr key_addr)
+      {
+        if (!key_addr.isValid())
+          return false;
+
+        auto row = key_addr.row();
+        auto col = key_addr.col();
+
+        if (col >= 8)
+        {
+          return rightHandMask.rows[row] & (1 << (7 - (col - 8)));
+        }
+        else
+        {
+          return leftHandMask.rows[row] & (1 << (7 - col));
+        }
+      }
+
+      void RaiseKeyScanner::maskHeldKeys()
+      {
+        memcpy(leftHandMask.rows, leftHandState.rows, sizeof(leftHandMask));
+        memcpy(rightHandMask.rows, rightHandState.rows, sizeof(rightHandMask));
+      }
+
+      bool RaiseKeyScanner::isKeyswitchPressed(KeyAddr key_addr)
+      {
+        auto row = key_addr.row();
+        auto col = key_addr.col();
+
+        if (col >= Props_::left_columns)
+        {
+          return (bitRead(rightHandState.rows[row],
+                          (Props_::matrix_columns - 1) - col) != 0);
+        }
+        else
+        {
+          return (bitRead(leftHandState.rows[row], col) != 0);
+        }
+      }
+
+      bool RaiseKeyScanner::wasKeyswitchPressed(KeyAddr key_addr)
+      {
+        auto row = key_addr.row();
+        auto col = key_addr.col();
+
+        if (col >= Props_::left_columns)
+        {
+          return (bitRead(previousRightHandState.rows[row],
+                          (Props_::matrix_columns - 1) - col) != 0);
+        }
+        else
+        {
+          return (bitRead(previousLeftHandState.rows[row], col) != 0);
+        }
+      }
+
+      uint8_t RaiseKeyScanner::pressedKeyswitchCount()
+      {
+        return __builtin_popcountll(leftHandState.all) +
+               __builtin_popcountll(rightHandState.all);
+      }
+
+      uint8_t RaiseKeyScanner::previousPressedKeyswitchCount()
+      {
+        return __builtin_popcountll(previousLeftHandState.all) +
+               __builtin_popcountll(previousRightHandState.all);
+      }
+
+      void RaiseKeyScanner::setKeyscanInterval(uint8_t interval)
+      {
+        RaiseHands::leftHand.setKeyscanInterval(interval);
+        RaiseHands::rightHand.setKeyscanInterval(interval);
+      }
+
+      void RaiseKeyScanner::setup()
+      {
+        static constexpr uint8_t keyscanner_pins[] = {
+            2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14,
+            15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 30,
+            31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42};
+        for (int i = 0; i < sizeof(keyscanner_pins); i++)
+        {
+          pinMode(keyscanner_pins[i], OUTPUT);
+          digitalWrite(keyscanner_pins[i], LOW);
+        }
+      }
+
+      void RaiseKeyScanner::reset()
+      {
+        leftHandState.all = 0;
+        rightHandState.all = 0;
+        Runtime.hid().keyboard().releaseAllKeys();
+        Runtime.hid().keyboard().sendReport();
+      }
+
+      /********* Hardware plugin *********/
+      void Raise::setup()
+      {
+        RaiseHands::setup();
+        KeyScanner::setup();
+        LEDDriver::setup();
+
+        // initialise Wire of scanner - have to do this here to avoid problem with
+        // static object intialisation ordering
+        Wire.begin();
+        Wire.setClock(I2C_CLOCK_KHZ * 1000);
+
+        RaiseHands::initializeSides();
+      }
+
+      void Raise::side::prepareForFlash()
+      {
+        Wire.end();
+
+        setPower(LOW);
+        // also turn off i2c pins to stop attiny from getting enough current through
+        // i2c to stay on
+        pinMode(SCL, OUTPUT);
+        pinMode(SDA, OUTPUT);
+        digitalWrite(SCL, false);
+        digitalWrite(SDA, false);
+
+        // wipe key states, to prevent accidental key repeats
+        RaiseKeyScanner::reset();
+
+        setPower(HIGH);
+
+        Wire.begin();
+        Wire.setClock(I2C_FLASH_CLOCK_KHZ * 1000);
+        // wait for side bootloader to be ready
+        delay(100);
+      }
+
+      uint8_t Raise::side::getPower() { return RaiseHands::getSidePower(); }
+      void Raise::side::setPower(uint8_t power) { RaiseHands::setSidePower(power); }
+
+      uint8_t Raise::side::leftVersion()
+      {
+        return RaiseHands::leftHand.readVersion();
+      }
+      uint8_t Raise::side::rightVersion()
+      {
+        return RaiseHands::rightHand.readVersion();
+      }
+
+      uint8_t Raise::side::leftCRCErrors()
+      {
+        return RaiseHands::leftHand.crc_errors();
+      }
+      uint8_t Raise::side::rightCRCErrors()
+      {
+        return RaiseHands::rightHand.crc_errors();
+      }
+
+      uint8_t Raise::side::leftSLEDVersion()
+      {
+        return RaiseHands::leftHand.readSLEDVersion();
+      }
+      uint8_t Raise::side::rightSLEDVersion()
+      {
+        return RaiseHands::rightHand.readSLEDVersion();
+      }
+
+      uint8_t Raise::side::leftSLEDCurrent()
+      {
+        return RaiseHands::leftHand.readSLEDCurrent();
+      }
+      uint8_t Raise::side::rightSLEDCurrent()
+      {
+        return RaiseHands::rightHand.readSLEDCurrent();
+      }
+      void Raise::side::setSLEDCurrent(uint8_t current)
+      {
+        RaiseHands::rightHand.setSLEDCurrent(current);
+        RaiseHands::leftHand.setSLEDCurrent(current);
+      }
+
+      Raise::settings::Layout Raise::settings::layout()
+      {
+        return RaiseHands::layout == LAYOUT_ANSI ? Layout::ANSI : Layout::ISO;
+      }
+      uint8_t Raise::settings::joint() { return RaiseHands::rightHand.readJoint(); }
+
+      uint16_t Raise::settings::keyscanInterval()
+      {
+        return RaiseHands::keyscanInterval();
+      }
+      String Raise::settings::getChipID()
+      {
+        return RaiseHands::getChipID();
+      }
+      void Raise::settings::keyscanInterval(uint16_t interval)
+      {
+        RaiseHands::keyscanInterval(interval);
+      }
+
+    } // namespace dygma
+  } // namespace device
+} // namespace kaleidoscope
 
 #endif
