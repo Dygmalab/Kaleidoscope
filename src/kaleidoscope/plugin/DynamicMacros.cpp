@@ -135,8 +135,6 @@ namespace kaleidoscope
           previous_macro_ended = false;
           break;
 
-        case MACRO_ACTION_STEP_INTERVAL:
-        case MACRO_ACTION_STEP_WAIT:
         case MACRO_ACTION_STEP_KEYCODEDOWN:
         case MACRO_ACTION_STEP_KEYCODEUP:
         case MACRO_ACTION_STEP_TAPCODE:
@@ -144,6 +142,8 @@ namespace kaleidoscope
           pos++;
           break;
 
+        case MACRO_ACTION_STEP_INTERVAL:
+        case MACRO_ACTION_STEP_WAIT:
         case MACRO_ACTION_STEP_KEYDOWN:
         case MACRO_ACTION_STEP_KEYUP:
         case MACRO_ACTION_STEP_TAP:
